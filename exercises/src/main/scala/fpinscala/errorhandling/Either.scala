@@ -29,6 +29,18 @@ sealed trait Either[+E, +A] {
       aa <- this
       bb <- b
     } yield f(aa, bb)
+
+  // Exercise 4.8
+  def map2AllErrors[EE >: E, B, C](b: Either[EE, B])(f: (A, B) => C): Either[Seq[EE], C] = this match {
+    case Right(a) => b match {
+      case Right(bb) => Right(f(a, bb))
+      case Left(e) => Left(Seq(e))
+    }
+    case Left(e) => b match {
+      case Right(_) => Left(Seq(e))
+      case Left(ee) => Left(Seq(e, ee))
+    }
+  }
 }
 
 case class Left[+E](value: E) extends Either[E, Nothing]
@@ -117,6 +129,9 @@ object Either {
   def mkPerson(name: String, age: Int): Either[String, Person] =
     mkName(name).map2(mkAge(age))(Person)
 
+  def mkPersonAllErrors(name: String, age: Int): Either[Seq[String], Person] =
+    mkName(name).map2AllErrors(mkAge(age))(Person)
+
   object Tests {
     def initialTests(): Unit = {
       println("Initial Tests")
@@ -154,8 +169,8 @@ object Either {
 
       println("orElse")
       println("------")
-      println(s"""Try(4 / 2).map(_ * 10).orElse(Left("orElse!")) = ${Try(4 / 2).map(_ * 10).orElse(Right("orElse!"))}""")
-      println(s"""Try(4 / 0).map(_ * 10).orElse(Left("orElse!")) = ${Try(4 / 0).map(_ * 10).orElse(Right("orElse!"))}""")
+      println(s"""Try(4 / 2).map(_ * 10).orElse(Right("orElse!")) = ${Try(4 / 2).map(_ * 10).orElse(Right("orElse!"))}""")
+      println(s"""Try(4 / 0).map(_ * 10).orElse(Right("orElse!")) = ${Try(4 / 0).map(_ * 10).orElse(Right("orElse!"))}""")
       println()
 
       println("map2")
@@ -238,6 +253,16 @@ object Either {
       println(s"""mkPerson("Graeme", -2) = ${mkPerson("Graeme", -2)}""")
       println(s"""mkPerson(null, -5) = ${mkPerson(null, -5)}""")
     }
+
+    def testExercise_4_8(): Unit = {
+      println("mkPersonAllErrors")
+      println("=================")
+
+      println(s"""mkPersonAllErrors("Graeme", 50) = ${mkPersonAllErrors("Graeme", 50)}""")
+      println(s"""mkPersonAllErrors("", 50) = ${mkPersonAllErrors("", 50)}""")
+      println(s"""mkPersonAllErrors("Graeme", -2) = ${mkPersonAllErrors("Graeme", -2)}""")
+      println(s"""mkPersonAllErrors(null, -5) = ${mkPersonAllErrors(null, -5)}""")
+    }
   }
 
   def main(args: Array[String]): Unit = {
@@ -252,5 +277,7 @@ object Either {
     testExercise_4_7()
 
     testPerson()
+
+    testExercise_4_8()
   }
 }
