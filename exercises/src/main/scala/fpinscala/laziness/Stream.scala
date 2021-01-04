@@ -4,26 +4,12 @@ import scala.annotation.tailrec
 import Stream.{cons, empty}
 
 sealed trait Stream[+A] {
-
-  // The arrow `=>` in front of the argument type `B` means that the function `f` takes its second argument by name
-  // and may choose not to evaluate it.
-  def foldRight[B](z: => B)(f: (A, => B) => B): B =
-    this match {
-      case Cons(h, t) => f(h(), t().foldRight(z)(f)) // If `f` doesn't evaluate its second argument, the recursion never occurs.
-      case _ => z
-    }
-
-  def exists(p: A => Boolean): Boolean =
-    foldRight(false)((a, b) => p(a) || b) // Here `b` is the unevaluated recursive step that folds the tail of the stream. If `p(a)` returns `true`, `b` will never be evaluated and the computation terminates early.
-
-  @annotation.tailrec
-  final def find(f: A => Boolean): Option[A] = this match {
+  def headOption: Option[A] = this match {
     case Empty => None
-    case Cons(h, t) => if (f(h())) Some(h()) else t().find(f)
+    case Cons(h, _) => Some(h())
   }
 
   // Exercise 5.1
-
   // The natural recursive solution
   // This solution will stack overflow for large streams, since it's not tail-recursive.
   def toListRecursiveTextbook: List[A] = this match {
@@ -142,19 +128,69 @@ sealed trait Stream[+A] {
     case _ => this
   }
 
-  def takeWhile(p: A => Boolean): Stream[A] = ???
+  // Exercise 5.3
+  def takeWhile(p: A => Boolean): Stream[A] = this match {
+    case Cons(h, t) =>
+      val a = h()
+      if (p(a))
+        cons(a, t().takeWhile(p))
+      else
+        empty
 
-  def forAll(p: A => Boolean): Boolean = ???
-
-  def headOption: Option[A] = this match {
-    case Empty => None
-    case Cons(h, _) => Some(h())
+    case _ => empty
   }
+
+  def takeWhileTextbook(f: A => Boolean): Stream[A] = this match {
+    case Cons(h, t) if f(h()) => cons(h(), t() takeWhile f)
+    case _ => empty
+  }
+
+  def existsRecursive(p: A => Boolean): Boolean = this match {
+    case Cons(h, t) => p(h()) || t().existsRecursive(p)
+    case _ => false
+  }
+
+  // The arrow => in front of the argument type B means that the function f takes its second argument by name
+  // and may choose not to evaluate it
+  def foldRight[B](z: => B)(f: (A, => B) => B): B = this match {
+    // If f doesn't evaluate its second argument, the recursion never occurs
+    case Cons(h, t) => f(h(), t().foldRight(z)(f))
+    case _ => z
+  }
+
+  // Here b is the unevaluated recursive step that folds the tail of the stream.
+  // If p(a) returns true, b will never be evaluated and the computation terminates early.
+  def exists(p: A => Boolean): Boolean =
+    foldRight(false)((a, b) => p(a) || b)
+
+  // Exercise 5.4
+  def forAllRecursive(p: A => Boolean): Boolean = this match {
+    case Cons(h, t) => p(h()) && t().forAllRecursive(p)
+    case _ => true
+  }
+
+  def forAll(p: A => Boolean): Boolean =
+    foldRight(true)((a, b) => p(a) && b)
+
+  // Exercise 5.5
+  def takeWhileViaFoldRight(p: A => Boolean): Stream[A] =
+    foldRight(empty[A])((a, b) =>
+      if (p(a))
+        cons(a, b)
+      else
+        empty
+    )
 
   // 5.7 map, filter, append, flatmap using foldRight. Part of the exercise is
   // writing your own function signatures.
 
   def startsWith[B](s: Stream[B]): Boolean = ???
+
+  @annotation.tailrec
+  final def find(f: A => Boolean): Option[A] = this match {
+    case Empty => None
+    case Cons(h, t) => if (f(h())) Some(h()) else t().find(f)
+  }
 }
 
 case object Empty extends Stream[Nothing]
@@ -191,7 +227,8 @@ object Stream {
 
       val stream = Cons(
         () => {
-          println("Expensive Op!"); "Bitcoin"
+          println("Expensive Op!")
+          "Bitcoin"
         },
         () => Empty
       )
@@ -256,6 +293,68 @@ object Stream {
     }
   }
 
+  def test_Exercise_5_3_5_5(): Unit = {
+    println("takeWhile")
+    println("=========")
+    println()
+
+    val s = Stream(1, 2, 3, 4, 5)
+
+    println(s"Stream(1, 2, 3, 4, 5).takeWhile(_ < 3).toList = ${s.takeWhile(_ < 3).toList}")
+    println(s"Stream(1, 2, 3, 4, 5).takeWhile(_ < 6).toList = ${s.takeWhile(_ < 6).toList}")
+    println(s"Stream(1, 2, 3, 4, 5).takeWhile(_ > 2).toList = ${s.takeWhile(_ > 2).toList}")
+    println(s"Stream(2, 4, 8, 0, 5).takeWhile(_ % 2 == 0).toList = ${Stream(2, 4, 8, 0, 5).takeWhile(_ % 2 == 0).toList}")
+    println()
+
+    println(s"Stream(1, 2, 3, 4, 5).takeWhileTextbook(_ < 3).toList = ${s.takeWhileTextbook(_ < 3).toList}")
+    println(s"Stream(1, 2, 3, 4, 5).takeWhileTextbook(_ < 6).toList = ${s.takeWhileTextbook(_ < 6).toList}")
+    println(s"Stream(1, 2, 3, 4, 5).takeWhileTextbook(_ > 2).toList = ${s.takeWhileTextbook(_ > 2).toList}")
+    println(s"Stream(2, 4, 8, 0, 5).takeWhileTextbook(_ % 2 == 0).toList = ${Stream(2, 4, 8, 0, 5).takeWhileTextbook(_ % 2 == 0).toList}")
+    println()
+
+    println(s"Stream(1, 2, 3, 4, 5).takeWhileViaFoldRight(_ < 3).toList = ${s.takeWhileViaFoldRight(_ < 3).toList}")
+    println(s"Stream(1, 2, 3, 4, 5).takeWhileViaFoldRight(_ < 6).toList = ${s.takeWhileViaFoldRight(_ < 6).toList}")
+    println(s"Stream(1, 2, 3, 4, 5).takeWhileViaFoldRight(_ > 2).toList = ${s.takeWhileViaFoldRight(_ > 2).toList}")
+    println(s"Stream(2, 4, 8, 0, 5).takeWhileViaFoldRight(_ % 2 == 0).toList = ${Stream(2, 4, 8, 0, 5).takeWhileViaFoldRight(_ % 2 == 0).toList}")
+    println()
+  }
+
+  def testExists(): Unit = {
+    def testExists(fnAsString: String, p: Int => Boolean): Unit = {
+      val s = Stream(1, 2, 3, 4, 5)
+
+      println(s"Stream(1, 2, 3, 4, 5).existsRecursive($fnAsString) = ${s.existsRecursive(p)}")
+      println(s"Stream(1, 2, 3, 4, 5).exists($fnAsString) = ${s.exists(p)}")
+      println()
+    }
+
+    println("exists")
+    println("======")
+    println()
+
+    testExists("_ == 5", _ == 5)
+    testExists("_ % 2 == 0", _ % 2 == 0)
+    testExists("_ % 2 == 6", _ % 6 == 0)
+  }
+
+  def testExercise_5_4(): Unit = {
+    println("forAll")
+    println("======")
+    println()
+
+    def testForAll(fnAsString: String, p: Int => Boolean): Unit = {
+      val s = Stream(1, 2, 3, 4, 5)
+
+      println(s"Stream(1, 2, 3, 4, 5).forAllRecursive($fnAsString) = ${s.forAllRecursive(p)}")
+      println(s"Stream(1, 2, 3, 4, 5).forAll($fnAsString) = ${s.forAll(p)}")
+      println()
+    }
+
+    testForAll("_ < 5", _ < 5)
+    testForAll("_ < 6", _ < 6)
+    testForAll("_ < 0", _ < 0)
+  }
+
   def main(args: Array[String]): Unit = {
     import Tests._
 
@@ -264,5 +363,11 @@ object Stream {
     test_Exercise_5_1()
 
     test_Exercise_5_2()
+
+    test_Exercise_5_3_5_5()
+
+    testExists()
+
+    testExercise_5_4()
   }
 }
