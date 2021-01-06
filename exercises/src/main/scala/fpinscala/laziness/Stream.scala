@@ -54,7 +54,7 @@ sealed trait Stream[+A] {
   }
 
   def toListViaFoldRight: List[A] =
-    this.foldRight(List[A]())((a, b) => a +: b)
+    this.foldRight(List[A]())((h, t) => h +: t)
 
   // Exercise 5.2
   def take(n: Int): Stream[A] = {
@@ -161,7 +161,7 @@ sealed trait Stream[+A] {
   // Here b is the unevaluated recursive step that folds the tail of the stream.
   // If p(a) returns true, b will never be evaluated and the computation terminates early.
   def exists(p: A => Boolean): Boolean =
-    foldRight(false)((a, b) => p(a) || b)
+    foldRight(false)((h, t) => p(h) || t)
 
   // Exercise 5.4
   def forAllRecursive(p: A => Boolean): Boolean = this match {
@@ -170,19 +170,30 @@ sealed trait Stream[+A] {
   }
 
   def forAll(p: A => Boolean): Boolean =
-    foldRight(true)((a, b) => p(a) && b)
+    foldRight(true)((h, t) => p(h) && t)
 
   // Exercise 5.5
   def takeWhileViaFoldRight(p: A => Boolean): Stream[A] =
-    foldRight(empty[A])((a, b) =>
-      if (p(a))
-        cons(a, b)
+    foldRight(empty[A])((h, t) =>
+      if (p(h))
+        cons(h, t)
       else
         empty
     )
 
+  // Exercise 5.6
+  def headOptionViaFoldRight: Option[A] =
+    foldRight(None: Option[A])((h, _) => Some(h))
+
   // 5.7 map, filter, append, flatmap using foldRight. Part of the exercise is
-  // writing your own function signatures.
+  // writing your own function signatures
+  def mapRecursive[B](f: A => B): Stream[B] = this match {
+    case Cons(h, t) => cons(f(h()), t().mapRecursive(f))
+    case _ => empty
+  }
+
+  def map[B](f: A => B): Stream[B] =
+    foldRight(empty[B])((h, t) => cons(f(h), t))
 
   def startsWith[B](s: Stream[B]): Boolean = ???
 
@@ -355,6 +366,32 @@ object Stream {
     testForAll("_ < 0", _ < 0)
   }
 
+  def testExercise_5_6(): Unit = {
+    println("headOptionViaFoldRight")
+    println("======================")
+    println()
+
+    println(s"Stream().headOptionViaFoldRight = ${Stream().headOptionViaFoldRight}")
+    println(s"Stream(1, 2, 3).headOptionViaFoldRight = ${Stream(1, 2, 3).headOptionViaFoldRight}")
+    println()
+  }
+
+  def testExercise_5_7(): Unit = {
+    println("map")
+    println("===")
+
+    def testMap(count: Int): Unit = {
+      val s = Stream(1, 2, 3, 4, 5)
+
+      println(s"Stream(1, 2, 3, 4, 5).mapRecursive(_.toFloat).take($count) = ${s.mapRecursive(_.toFloat).take(count).toList}")
+      println(s"Stream(1, 2, 3, 4, 5).map(_.toFloat).take($count) = ${s.map(_.toFloat).take(count).toList}")
+      println()
+    }
+
+    testMap(5)
+    testMap(3)
+  }
+
   def main(args: Array[String]): Unit = {
     import Tests._
 
@@ -369,5 +406,9 @@ object Stream {
     testExists()
 
     testExercise_5_4()
+
+    testExercise_5_6()
+
+    testExercise_5_7()
   }
 }
