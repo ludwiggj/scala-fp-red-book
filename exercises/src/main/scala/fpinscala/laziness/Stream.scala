@@ -193,7 +193,26 @@ sealed trait Stream[+A] {
   }
 
   def map[B](f: A => B): Stream[B] =
-    foldRight(empty[B])((h, t) => cons(f(h), t))
+    foldRight(empty[B])((h, acc) => cons(f(h), acc))
+
+  def filter(p: A => Boolean): Stream[A] =
+    foldRight(empty[A])((h, acc) => if (p(h)) cons(h, acc) else acc)
+
+  def appendElem[B>:A](e: => B): Stream[B] =
+    foldRight(empty[B])((h, acc) => if (acc == Empty) cons(h, Stream(e)) else cons(h, acc))
+
+  def appendElemTextbook[B>:A](e: => B): Stream[B] =
+    foldRight(Stream(e))((h, acc) => cons(h, acc))
+
+  def flatMap[B](f: A => Stream[B]): Stream[B] =
+    foldRight(empty[B])((h, acc) => f(h).foldRight(acc)(cons(_, _)))
+
+  // NOTE: Append signature should actually take a Stream!
+  def append[B>:A](s: => Stream[B]): Stream[B] =
+    foldRight(s)((h, acc) => cons(h, acc))
+
+  def flatMapTextbook[B](f: A => Stream[B]): Stream[B] =
+    foldRight(empty[B])((h, acc) => f(h) append acc)
 
   def startsWith[B](s: Stream[B]): Boolean = ???
 
@@ -377,9 +396,6 @@ object Stream {
   }
 
   def testExercise_5_7(): Unit = {
-    println("map")
-    println("===")
-
     def testMap(count: Int): Unit = {
       val s = Stream(1, 2, 3, 4, 5)
 
@@ -388,8 +404,59 @@ object Stream {
       println()
     }
 
+    def testFilter(fnDescription: String, p: Int => Boolean): Unit = {
+      val s = Stream(1, 2, 3, 4, 5)
+      println(s"Stream(1, 2, 3, 4, 5).filter($fnDescription).take(5) = ${s.filter(p).take(5).toList}")
+      println()
+    }
+
+    def testAppendElem(): Unit = {
+      val s = Stream(1, 2, 3, 4, 5)
+      println(s"Stream(1, 2, 3, 4, 5).appendElem(6).take(6) = ${s.appendElem(6).take(6).toList}")
+      println(s"Stream(1, 2, 3, 4, 5).appendElemTextbook(6).take(6) = ${s.appendElemTextbook(6).take(6).toList}")
+      println()
+    }
+
+    def testAppend(): Unit = {
+      val s = Stream(1, 2, 3, 4, 5)
+      val t = Stream(6, 7, 8, 9, 10)
+      println(s"Stream(1, 2, 3, 4, 5).append(Stream(6, 7, 8, 9, 10)).take(10) = ${s.append(t).take(10).toList}")
+      println()
+    }
+
+    def testFlatMap(): Unit = {
+      val s = Stream(1, 2, 3, 4, 5)
+
+      def toStream(x: Int): Stream[Int] = {
+        Stream(x, 2 * x)
+      }
+
+      println(s"Stream(1, 2, 3, 4, 5).flatMap(toStream(_)).take(10) = ${s.flatMap(toStream(_)).take(10).toList}")
+      println(s"Stream(1, 2, 3, 4, 5).flatMapTextbook(toStream(_)).take(10) = ${s.flatMapTextbook(toStream(_)).take(10).toList}")
+      println()
+    }
+
+    println("map")
+    println("===")
     testMap(5)
     testMap(3)
+
+    println("filter")
+    println("======")
+    testFilter("_ > 3", _ > 3);
+    testFilter("is odd", _ % 2 == 1);
+
+    println("appendElem")
+    println("==========")
+    testAppendElem()
+
+    println("append")
+    println("======")
+    testAppend()
+
+    println("flatMap")
+    println("=======")
+    testFlatMap()
   }
 
   def main(args: Array[String]): Unit = {
