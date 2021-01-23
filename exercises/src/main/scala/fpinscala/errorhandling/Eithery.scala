@@ -115,119 +115,121 @@ object Eithery {
   def mkPerson(name: String, age: Int): Eithery[String, Person] =
     mkName(name).map2(mkAge(age))(Person)
 
-  object Tests {
-    def initialTests(): Unit = {
-      println("Initial Tests")
-      println("=============")
+}
 
-      println(s"mean(Seq()) = ${mean(IndexedSeq())}")
-      println(s"mean(Seq(1, 3, 5)) = ${mean(IndexedSeq(1, 3, 5))}")
+object EitheryTests {
 
-      println(s"safeDiv(4, 2) = ${safeDiv(4, 2)}")
-      println(s"safeDiv(4, 0) = ${safeDiv(4, 0)}")
+  import Eithery._
 
-      println(s"Try(4/2) = ${Try(4 / 2)}")
-      println(s"Try(4/0) = ${Try(4 / 0)}")
+  def initialTests(): Unit = {
+    println("Initial Tests")
+    println("=============")
 
-      println()
+    println(s"mean(Seq()) = ${mean(IndexedSeq())}")
+    println(s"mean(Seq(1, 3, 5)) = ${mean(IndexedSeq(1, 3, 5))}")
+
+    println(s"safeDiv(4, 2) = ${safeDiv(4, 2)}")
+    println(s"safeDiv(4, 0) = ${safeDiv(4, 0)}")
+
+    println(s"Try(4/2) = ${Try(4 / 2)}")
+    println(s"Try(4/0) = ${Try(4 / 0)}")
+
+    println()
+  }
+
+  def testExercise_4_6(): Unit = {
+    println("Exercise 4.6, either")
+    println("====================")
+
+    println("map")
+    println("---")
+    println(s"Try(4 / 2).map(_ * 10) = ${Try(4 / 2).map(_ * 10)}")
+    println(s"Try(4 / 0).map(_ * 10) = ${Try(4 / 0).map(_ * 10)}")
+    println()
+
+    println("flatMap")
+    println("-------")
+    println(s"Try(4 / 2).flatMap(x => Try(x * 10)) = ${Try(4 / 2).flatMap(x => Try(x * 10))}")
+    println(s"Try(4 / 2).flatMap(x => Try(x / 0)) = ${Try(4 / 2).flatMap(x => Try(x / 0))}")
+    println(s"Try(4 / 0).flatMap(x => Try(x * 10)) = ${Try(4 / 0).flatMap(x => Try(x * 10))}")
+    println(s"Try(4 / 0).flatMap(x => Try(x / 0)) = ${Try(4 / 0).flatMap(x => Try(x / 0))}")
+    println()
+
+    println("orElse")
+    println("------")
+    println(s"""Try(4 / 2).map(_ * 10).orElse(Righty("orElse!")) = ${Try(4 / 2).map(_ * 10).orElse(Righty("orElse!"))}""")
+    println(s"""Try(4 / 0).map(_ * 10).orElse(Righty("orElse!")) = ${Try(4 / 0).map(_ * 10).orElse(Righty("orElse!"))}""")
+    println(s"""Try(4 / 2).map(_ * 10).orElse(Try("six".toInt)) = ${Try(4 / 2).map(_ * 10).orElse(Try("six".toInt))}""")
+    println(s"""Try(4 / 0).map(_ * 10).orElse(Try("six".toInt)) = ${Try(4 / 0).map(_ * 10).orElse(Try("six".toInt))}""")
+    println()
+
+    println("map2")
+    println("----")
+    println(s"Try(4 / 2).map2(Try(10 / 2))(_ * _) = ${Try(4 / 2).map2(Try(10 / 2))(_ * _)}")
+    println(s"Try(4 / 0).map2(Try(10 / 2))(_ * _) = ${Try(4 / 0).map2(Try(10 / 2))(_ * _)}")
+    println(s"Try(4 / 2).map2(Try(10 / 0))(_ * _) = ${Try(4 / 2).map2(Try(10 / 0))(_ * _)}")
+    println(s"""Try(4 / 0).map2(Try("seven".toInt))(_ * _) = ${Try(4 / 0).map2(Try("seven".toInt))(_ * _)}""")
+    println()
+  }
+
+  def testParseInsuranceRateQuote(): Unit = {
+    println("parseInsuranceRateQuote")
+    println("=======================")
+
+    def testParseInsuranceRateQuote(age: String, numberOfSpeedingTickets: String): Unit = {
+      println(s"insuranceQuote(age = [$age], numberOfSpeedingTickets = [$numberOfSpeedingTickets]) = " +
+        parseInsuranceRateQuote(age, numberOfSpeedingTickets))
     }
 
-    def testExercise_4_6(): Unit = {
-      println("Exercise 4.6, either")
-      println("====================")
+    testParseInsuranceRateQuote("20", "2")
+    testParseInsuranceRateQuote("50", "0")
+    testParseInsuranceRateQuote("twenty-two", "0")
+    testParseInsuranceRateQuote("22", "zero")
+    testParseInsuranceRateQuote("oh", "dear")
 
-      println("map")
-      println("---")
-      println(s"Try(4 / 2).map(_ * 10) = ${Try(4 / 2).map(_ * 10)}")
-      println(s"Try(4 / 0).map(_ * 10) = ${Try(4 / 0).map(_ * 10)}")
-      println()
-
-      println("flatMap")
-      println("-------")
-      println(s"Try(4 / 2).flatMap(x => Try(x * 10)) = ${Try(4 / 2).flatMap(x => Try(x * 10))}")
-      println(s"Try(4 / 2).flatMap(x => Try(x / 0)) = ${Try(4 / 2).flatMap(x => Try(x / 0))}")
-      println(s"Try(4 / 0).flatMap(x => Try(x * 10)) = ${Try(4 / 0).flatMap(x => Try(x * 10))}")
-      println(s"Try(4 / 0).flatMap(x => Try(x / 0)) = ${Try(4 / 0).flatMap(x => Try(x / 0))}")
-      println()
-
-      println("orElse")
-      println("------")
-      println(s"""Try(4 / 2).map(_ * 10).orElse(Righty("orElse!")) = ${Try(4 / 2).map(_ * 10).orElse(Righty("orElse!"))}""")
-      println(s"""Try(4 / 0).map(_ * 10).orElse(Righty("orElse!")) = ${Try(4 / 0).map(_ * 10).orElse(Righty("orElse!"))}""")
-      println(s"""Try(4 / 2).map(_ * 10).orElse(Try("six".toInt)) = ${Try(4 / 2).map(_ * 10).orElse(Try("six".toInt))}""")
-      println(s"""Try(4 / 0).map(_ * 10).orElse(Try("six".toInt)) = ${Try(4 / 0).map(_ * 10).orElse(Try("six".toInt))}""")
-      println()
-
-      println("map2")
-      println("----")
-      println(s"Try(4 / 2).map2(Try(10 / 2))(_ * _) = ${Try(4 / 2).map2(Try(10 / 2))(_ * _)}")
-      println(s"Try(4 / 0).map2(Try(10 / 2))(_ * _) = ${Try(4 / 0).map2(Try(10 / 2))(_ * _)}")
-      println(s"Try(4 / 2).map2(Try(10 / 0))(_ * _) = ${Try(4 / 2).map2(Try(10 / 0))(_ * _)}")
-      println(s"""Try(4 / 0).map2(Try("seven".toInt))(_ * _) = ${Try(4 / 0).map2(Try("seven".toInt))(_ * _)}""")
-      println()
-    }
-
-    def testParseInsuranceRateQuote(): Unit = {
-      println("parseInsuranceRateQuote")
-      println("=======================")
-
-      def testParseInsuranceRateQuote(age: String, numberOfSpeedingTickets: String): Unit = {
-        println(s"insuranceQuote(age = [$age], numberOfSpeedingTickets = [$numberOfSpeedingTickets]) = " +
-          parseInsuranceRateQuote(age, numberOfSpeedingTickets))
-      }
-
-      testParseInsuranceRateQuote("20", "2")
-      testParseInsuranceRateQuote("50", "0")
-      testParseInsuranceRateQuote("twenty-two", "0")
-      testParseInsuranceRateQuote("22", "zero")
-      testParseInsuranceRateQuote("oh", "dear")
-
-      println()
-    }
+    println()
+  }
 
 
-    def testExercise_4_7(): Unit = {
-      println("sequence")
-      println("========")
+  def testExercise_4_7(): Unit = {
+    println("sequence")
+    println("========")
 
-      println(s"sequence of List() is ${sequence(List())}")
-      println(s"sequence of List(Try(4 / 2), Try(4 * 2)) is ${sequence(List(Try(4 / 2), Try(4 * 2)))}")
-      println(s"""sequence of List(Try(4 / 0), Try(4 * 2), Try("three".toInt)) is ${sequence(List(Try(4 / 0), Try(4 * 2), Try("three".toInt)))}""")
-      println(s"""sequence of List(Try("four".toInt), Try(4 * 2), Try(3 / 0)) is ${sequence(List(Try("four".toInt), Try(4 * 2), Try(3 / 0)))}""")
-      println()
+    println(s"sequence of List() is ${sequence(List())}")
+    println(s"sequence of List(Try(4 / 2), Try(4 * 2)) is ${sequence(List(Try(4 / 2), Try(4 * 2)))}")
+    println(s"""sequence of List(Try(4 / 0), Try(4 * 2), Try("three".toInt)) is ${sequence(List(Try(4 / 0), Try(4 * 2), Try("three".toInt)))}""")
+    println(s"""sequence of List(Try("four".toInt), Try(4 * 2), Try(3 / 0)) is ${sequence(List(Try("four".toInt), Try(4 * 2), Try(3 / 0)))}""")
+    println()
 
-      println("traverse")
-      println("========")
+    println("traverse")
+    println("========")
 
-      println(s"traverse of List[String]()(s => Try(s.toInt)) is ${traverse(List[String]())(s => Try(s.toInt))}")
-      println(s"""traverse of List[String]("1", "2", "3")(s => Try(s.toInt)) is ${traverse(List[String]("1", "2", "3"))(s => Try(s.toInt))}""")
-      println(s"""traverse of List[String]("1", "two", "3")(s => Try(s.toInt)) is ${traverse(List[String]("1", "two", "3"))(s => Try(s.toInt))}""")
-      println(s"""traverse of List[String]("one", "2", "three")(s => Try(s.toInt)) is ${traverse(List[String]("one", "2", "three"))(s => Try(s.toInt))}""")
-      println()
-    }
+    println(s"traverse of List[String]()(s => Try(s.toInt)) is ${traverse(List[String]())(s => Try(s.toInt))}")
+    println(s"""traverse of List[String]("1", "2", "3")(s => Try(s.toInt)) is ${traverse(List[String]("1", "2", "3"))(s => Try(s.toInt))}""")
+    println(s"""traverse of List[String]("1", "two", "3")(s => Try(s.toInt)) is ${traverse(List[String]("1", "two", "3"))(s => Try(s.toInt))}""")
+    println(s"""traverse of List[String]("one", "2", "three")(s => Try(s.toInt)) is ${traverse(List[String]("one", "2", "three"))(s => Try(s.toInt))}""")
+    println()
+  }
 
-    def testPerson(): Unit = {
-      println("person")
-      println("======")
+  def testPerson(): Unit = {
+    println("person")
+    println("======")
 
-      println(s"""mkName("") = ${mkName("")}""")
-      println(s"""mkName(null) = ${mkName(null)}""")
-      println(s"""mkName("Graeme") = ${mkName("Graeme")}""")
+    println(s"""mkName("") = ${mkName("")}""")
+    println(s"""mkName(null) = ${mkName(null)}""")
+    println(s"""mkName("Graeme") = ${mkName("Graeme")}""")
 
-      println(s"""mkAge(-1) = ${mkAge(-1)}""")
-      println(s"""mkAge(0) = ${mkAge(0)}""")
-      println(s"""mkAge(1) = ${mkAge(1)}""")
+    println(s"""mkAge(-1) = ${mkAge(-1)}""")
+    println(s"""mkAge(0) = ${mkAge(0)}""")
+    println(s"""mkAge(1) = ${mkAge(1)}""")
 
-      println(s"""mkPerson("Graeme", 50) = ${mkPerson("Graeme", 50)}""")
-      println(s"""mkPerson("", 50) = ${mkPerson("", 50)}""")
-      println(s"""mkPerson("Graeme", -2) = ${mkPerson("Graeme", -2)}""")
-      println(s"""mkPerson(null, -5) = ${mkPerson(null, -5)}""")
-    }
+    println(s"""mkPerson("Graeme", 50) = ${mkPerson("Graeme", 50)}""")
+    println(s"""mkPerson("", 50) = ${mkPerson("", 50)}""")
+    println(s"""mkPerson("Graeme", -2) = ${mkPerson("Graeme", -2)}""")
+    println(s"""mkPerson(null, -5) = ${mkPerson(null, -5)}""")
   }
 
   def main(args: Array[String]): Unit = {
-    import Eithery.Tests._
-
     initialTests()
 
     testExercise_4_6()

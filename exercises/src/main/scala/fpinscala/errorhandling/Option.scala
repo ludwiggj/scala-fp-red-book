@@ -53,7 +53,7 @@ case class Some[+A](a: A) extends Option[A]
 
 case object None extends Option[Nothing]
 
-object Option {
+object OptionWorkout {
   def failingFn(i: Int): Int = {
     // `val y: Int = ...` declares `y` as having type `Int`, and sets it equal to the right hand side of the `=`.
     val y: Int = throw new Exception("fail!")

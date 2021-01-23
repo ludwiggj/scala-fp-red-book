@@ -198,17 +198,17 @@ sealed trait Stream[+A] {
   def filter(p: A => Boolean): Stream[A] =
     foldRight(empty[A])((h, acc) => if (p(h)) cons(h, acc) else acc)
 
-  def appendElem[B>:A](e: => B): Stream[B] =
+  def appendElem[B >: A](e: => B): Stream[B] =
     foldRight(empty[B])((h, acc) => if (acc == Empty) cons(h, Stream(e)) else cons(h, acc))
 
-  def appendElemTextbook[B>:A](e: => B): Stream[B] =
+  def appendElemTextbook[B >: A](e: => B): Stream[B] =
     foldRight(Stream(e))((h, acc) => cons(h, acc))
 
   def flatMap[B](f: A => Stream[B]): Stream[B] =
     foldRight(empty[B])((h, acc) => f(h).foldRight(acc)(cons(_, _)))
 
   // NOTE: Append signature should actually take a Stream!
-  def append[B>:A](s: => Stream[B]): Stream[B] =
+  def append[B >: A](s: => Stream[B]): Stream[B] =
     foldRight(s)((h, acc) => cons(h, acc))
 
   def flatMapTextbook[B](f: A => Stream[B]): Stream[B] =
@@ -245,82 +245,62 @@ object Stream {
   def from(n: Int): Stream[Int] = ???
 
   def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] = ???
+}
 
-  object Tests {
-    def testHeadOption(): Unit = {
-      println("headOption")
-      println("==========")
-      println()
+object StreamTests {
 
-      println(s"Stream().headOption = ${Stream().headOption}")
-      println(s"Stream(1, 2, 3).headOption = ${Stream(1, 2, 3).headOption}")
+  def testHeadOption(): Unit = {
+    println("headOption")
+    println("==========")
+    println()
 
-      val stream = Cons(
-        () => {
-          println("Expensive Op!")
-          "Bitcoin"
-        },
-        () => Empty
-      )
+    val stream = Cons(
+      () => {
+        println("Expensive Op!")
+        "Bitcoin"
+      },
+      () => Empty
+    )
 
-      println(s"""Cons(() => { println("Expensive Op!"); 1}, () => Empty).headOption = ${stream.headOption}""")
-      println(s"""Cons(() => { println("Expensive Op!"); 1}, () => Empty).headOption = ${stream.headOption}""")
+    println(s"""Cons(() => { println("Expensive Op!"); 1}, () => Empty).headOption = ${stream.headOption}""")
+    println(s"""Cons(() => { println("Expensive Op!"); 1}, () => Empty).headOption = ${stream.headOption}""")
+    println()
+  }
+
+  def test_Exercise_5_2(): Unit = {
+    def testTake(count: Int): Unit = {
+      val s = Stream(1, 2, 3, 4, 5)
+
+      println(s"Stream(1, 2, 3, 4, 5).take($count).toList = ${s.take(count).toList}")
+      println(s"Stream(1, 2, 3, 4, 5).takeFast($count).toList = ${s.takeFast(count).toList}")
+      println(s"Stream(1, 2, 3, 4, 5).takeTextbook($count).toList = ${s.takeTextbook(count).toList}")
       println()
     }
 
-    def test_Exercise_5_1(): Unit = {
-      println("toList")
-      println("======")
+    def testDrop(count: Int): Unit = {
+      val s = Stream(1, 2, 3, 4, 5)
+      println(s"Stream(1, 2, 3, 4, 5).drop($count).toList = ${s.drop(count).toList}")
+      println(s"Stream(1, 2, 3, 4, 5).dropTextbook($count).toList = ${s.dropTextbook(count).toList}")
       println()
-
-      def testToList[A](streamStr: String, s: Stream[A]): Unit = {
-        println(s"$streamStr.toListRecursiveTextbook = ${s.toListRecursiveTextbook}")
-        println(s"$streamStr.toListRecursive = ${s.toListRecursive}")
-        println(s"$streamStr.toList = ${s.toList}")
-        println(s"$streamStr.toListFast = ${s.toListFast}")
-        println(s"$streamStr.toListViaFoldRight = ${s.toListViaFoldRight}")
-        println()
-      }
-
-      testToList("Stream(1, 2, 3)", Stream(1, 2, 3))
-      testToList("Stream()", Stream())
     }
 
-    def test_Exercise_5_2(): Unit = {
-      def testTake(count: Int): Unit = {
-        val s = Stream(1, 2, 3, 4, 5)
+    println("take")
+    println("====")
+    println()
 
-        println(s"Stream(1, 2, 3, 4, 5).take($count).toList = ${s.take(count).toList}")
-        println(s"Stream(1, 2, 3, 4, 5).takeFast($count).toList = ${s.takeFast(count).toList}")
-        println(s"Stream(1, 2, 3, 4, 5).takeTextbook($count).toList = ${s.takeTextbook(count).toList}")
-        println()
-      }
+    testTake(3)
+    testTake(5)
+    testTake(-1)
+    testTake(6)
 
-      def testDrop(count: Int): Unit = {
-        val s = Stream(1, 2, 3, 4, 5)
-        println(s"Stream(1, 2, 3, 4, 5).drop($count).toList = ${s.drop(count).toList}")
-        println(s"Stream(1, 2, 3, 4, 5).dropTextbook($count).toList = ${s.dropTextbook(count).toList}")
-        println()
-      }
+    println("drop")
+    println("====")
+    println()
 
-      println("take")
-      println("====")
-      println()
-
-      testTake(3)
-      testTake(5)
-      testTake(-1)
-      testTake(6)
-
-      println("drop")
-      println("====")
-      println()
-
-      testDrop(3)
-      testDrop(5)
-      testDrop(-1)
-      testDrop(6)
-    }
+    testDrop(3)
+    testDrop(5)
+    testDrop(-1)
+    testDrop(6)
   }
 
   def test_Exercise_5_3_5_5(): Unit = {
@@ -330,22 +310,46 @@ object Stream {
 
     val s = Stream(1, 2, 3, 4, 5)
 
-    println(s"Stream(1, 2, 3, 4, 5).takeWhile(_ < 3).toList = ${s.takeWhile(_ < 3).toList}")
-    println(s"Stream(1, 2, 3, 4, 5).takeWhile(_ < 6).toList = ${s.takeWhile(_ < 6).toList}")
-    println(s"Stream(1, 2, 3, 4, 5).takeWhile(_ > 2).toList = ${s.takeWhile(_ > 2).toList}")
-    println(s"Stream(2, 4, 8, 0, 5).takeWhile(_ % 2 == 0).toList = ${Stream(2, 4, 8, 0, 5).takeWhile(_ % 2 == 0).toList}")
+    println(s"Stream(1, 2, 3, 4, 5).takeWhile(_ < 3).toList = ${
+      s.takeWhile(_ < 3).toList
+    }")
+    println(s"Stream(1, 2, 3, 4, 5).takeWhile(_ < 6).toList = ${
+      s.takeWhile(_ < 6).toList
+    }")
+    println(s"Stream(1, 2, 3, 4, 5).takeWhile(_ > 2).toList = ${
+      s.takeWhile(_ > 2).toList
+    }")
+    println(s"Stream(2, 4, 8, 0, 5).takeWhile(_ % 2 == 0).toList = ${
+      Stream(2, 4, 8, 0, 5).takeWhile(_ % 2 == 0).toList
+    }")
     println()
 
-    println(s"Stream(1, 2, 3, 4, 5).takeWhileTextbook(_ < 3).toList = ${s.takeWhileTextbook(_ < 3).toList}")
-    println(s"Stream(1, 2, 3, 4, 5).takeWhileTextbook(_ < 6).toList = ${s.takeWhileTextbook(_ < 6).toList}")
-    println(s"Stream(1, 2, 3, 4, 5).takeWhileTextbook(_ > 2).toList = ${s.takeWhileTextbook(_ > 2).toList}")
-    println(s"Stream(2, 4, 8, 0, 5).takeWhileTextbook(_ % 2 == 0).toList = ${Stream(2, 4, 8, 0, 5).takeWhileTextbook(_ % 2 == 0).toList}")
+    println(s"Stream(1, 2, 3, 4, 5).takeWhileTextbook(_ < 3).toList = ${
+      s.takeWhileTextbook(_ < 3).toList
+    }")
+    println(s"Stream(1, 2, 3, 4, 5).takeWhileTextbook(_ < 6).toList = ${
+      s.takeWhileTextbook(_ < 6).toList
+    }")
+    println(s"Stream(1, 2, 3, 4, 5).takeWhileTextbook(_ > 2).toList = ${
+      s.takeWhileTextbook(_ > 2).toList
+    }")
+    println(s"Stream(2, 4, 8, 0, 5).takeWhileTextbook(_ % 2 == 0).toList = ${
+      Stream(2, 4, 8, 0, 5).takeWhileTextbook(_ % 2 == 0).toList
+    }")
     println()
 
-    println(s"Stream(1, 2, 3, 4, 5).takeWhileViaFoldRight(_ < 3).toList = ${s.takeWhileViaFoldRight(_ < 3).toList}")
-    println(s"Stream(1, 2, 3, 4, 5).takeWhileViaFoldRight(_ < 6).toList = ${s.takeWhileViaFoldRight(_ < 6).toList}")
-    println(s"Stream(1, 2, 3, 4, 5).takeWhileViaFoldRight(_ > 2).toList = ${s.takeWhileViaFoldRight(_ > 2).toList}")
-    println(s"Stream(2, 4, 8, 0, 5).takeWhileViaFoldRight(_ % 2 == 0).toList = ${Stream(2, 4, 8, 0, 5).takeWhileViaFoldRight(_ % 2 == 0).toList}")
+    println(s"Stream(1, 2, 3, 4, 5).takeWhileViaFoldRight(_ < 3).toList = ${
+      s.takeWhileViaFoldRight(_ < 3).toList
+    }")
+    println(s"Stream(1, 2, 3, 4, 5).takeWhileViaFoldRight(_ < 6).toList = ${
+      s.takeWhileViaFoldRight(_ < 6).toList
+    }")
+    println(s"Stream(1, 2, 3, 4, 5).takeWhileViaFoldRight(_ > 2).toList = ${
+      s.takeWhileViaFoldRight(_ > 2).toList
+    }")
+    println(s"Stream(2, 4, 8, 0, 5).takeWhileViaFoldRight(_ % 2 == 0).toList = ${
+      Stream(2, 4, 8, 0, 5).takeWhileViaFoldRight(_ % 2 == 0).toList
+    }")
     println()
   }
 
@@ -353,8 +357,12 @@ object Stream {
     def testExists(fnAsString: String, p: Int => Boolean): Unit = {
       val s = Stream(1, 2, 3, 4, 5)
 
-      println(s"Stream(1, 2, 3, 4, 5).existsRecursive($fnAsString) = ${s.existsRecursive(p)}")
-      println(s"Stream(1, 2, 3, 4, 5).exists($fnAsString) = ${s.exists(p)}")
+      println(s"Stream(1, 2, 3, 4, 5).existsRecursive($fnAsString) = ${
+        s.existsRecursive(p)
+      }")
+      println(s"Stream(1, 2, 3, 4, 5).exists($fnAsString) = ${
+        s.exists(p)
+      }")
       println()
     }
 
@@ -375,8 +383,12 @@ object Stream {
     def testForAll(fnAsString: String, p: Int => Boolean): Unit = {
       val s = Stream(1, 2, 3, 4, 5)
 
-      println(s"Stream(1, 2, 3, 4, 5).forAllRecursive($fnAsString) = ${s.forAllRecursive(p)}")
-      println(s"Stream(1, 2, 3, 4, 5).forAll($fnAsString) = ${s.forAll(p)}")
+      println(s"Stream(1, 2, 3, 4, 5).forAllRecursive($fnAsString) = ${
+        s.forAllRecursive(p)
+      }")
+      println(s"Stream(1, 2, 3, 4, 5).forAll($fnAsString) = ${
+        s.forAll(p)
+      }")
       println()
     }
 
@@ -390,8 +402,12 @@ object Stream {
     println("======================")
     println()
 
-    println(s"Stream().headOptionViaFoldRight = ${Stream().headOptionViaFoldRight}")
-    println(s"Stream(1, 2, 3).headOptionViaFoldRight = ${Stream(1, 2, 3).headOptionViaFoldRight}")
+    println(s"Stream().headOptionViaFoldRight = ${
+      Stream().headOptionViaFoldRight
+    }")
+    println(s"Stream(1, 2, 3).headOptionViaFoldRight = ${
+      Stream(1, 2, 3).headOptionViaFoldRight
+    }")
     println()
   }
 
@@ -399,28 +415,40 @@ object Stream {
     def testMap(count: Int): Unit = {
       val s = Stream(1, 2, 3, 4, 5)
 
-      println(s"Stream(1, 2, 3, 4, 5).mapRecursive(_.toFloat).take($count) = ${s.mapRecursive(_.toFloat).take(count).toList}")
-      println(s"Stream(1, 2, 3, 4, 5).map(_.toFloat).take($count) = ${s.map(_.toFloat).take(count).toList}")
+      println(s"Stream(1, 2, 3, 4, 5).mapRecursive(_.toFloat).take($count) = ${
+        s.mapRecursive(_.toFloat).take(count).toList
+      }")
+      println(s"Stream(1, 2, 3, 4, 5).map(_.toFloat).take($count) = ${
+        s.map(_.toFloat).take(count).toList
+      }")
       println()
     }
 
     def testFilter(fnDescription: String, p: Int => Boolean): Unit = {
       val s = Stream(1, 2, 3, 4, 5)
-      println(s"Stream(1, 2, 3, 4, 5).filter($fnDescription).take(5) = ${s.filter(p).take(5).toList}")
+      println(s"Stream(1, 2, 3, 4, 5).filter($fnDescription).take(5) = ${
+        s.filter(p).take(5).toList
+      }")
       println()
     }
 
     def testAppendElem(): Unit = {
       val s = Stream(1, 2, 3, 4, 5)
-      println(s"Stream(1, 2, 3, 4, 5).appendElem(6).take(6) = ${s.appendElem(6).take(6).toList}")
-      println(s"Stream(1, 2, 3, 4, 5).appendElemTextbook(6).take(6) = ${s.appendElemTextbook(6).take(6).toList}")
+      println(s"Stream(1, 2, 3, 4, 5).appendElem(6).take(6) = ${
+        s.appendElem(6).take(6).toList
+      }")
+      println(s"Stream(1, 2, 3, 4, 5).appendElemTextbook(6).take(6) = ${
+        s.appendElemTextbook(6).take(6).toList
+      }")
       println()
     }
 
     def testAppend(): Unit = {
       val s = Stream(1, 2, 3, 4, 5)
       val t = Stream(6, 7, 8, 9, 10)
-      println(s"Stream(1, 2, 3, 4, 5).append(Stream(6, 7, 8, 9, 10)).take(10) = ${s.append(t).take(10).toList}")
+      println(s"Stream(1, 2, 3, 4, 5).append(Stream(6, 7, 8, 9, 10)).take(10) = ${
+        s.append(t).take(10).toList
+      }")
       println()
     }
 
@@ -431,8 +459,12 @@ object Stream {
         Stream(x, 2 * x)
       }
 
-      println(s"Stream(1, 2, 3, 4, 5).flatMap(toStream(_)).take(10) = ${s.flatMap(toStream(_)).take(10).toList}")
-      println(s"Stream(1, 2, 3, 4, 5).flatMapTextbook(toStream(_)).take(10) = ${s.flatMapTextbook(toStream(_)).take(10).toList}")
+      println(s"Stream(1, 2, 3, 4, 5).flatMap(toStream(_)).take(10) = ${
+        s.flatMap(toStream(_)).take(10).toList
+      }")
+      println(s"Stream(1, 2, 3, 4, 5).flatMapTextbook(toStream(_)).take(10) = ${
+        s.flatMapTextbook(toStream(_)).take(10).toList
+      }")
       println()
     }
 
@@ -460,11 +492,8 @@ object Stream {
   }
 
   def main(args: Array[String]): Unit = {
-    import Tests._
 
     testHeadOption()
-
-    test_Exercise_5_1()
 
     test_Exercise_5_2()
 
