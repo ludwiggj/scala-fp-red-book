@@ -1,7 +1,7 @@
 package fpinscala.laziness
 
 import scala.annotation.tailrec
-import Stream.{cons, empty}
+import Stream.{cons, empty, unfoldTextbook}
 
 sealed trait Stream[+A] {
   def headOption: Option[A] = this match {
@@ -185,8 +185,8 @@ sealed trait Stream[+A] {
   def headOptionViaFoldRight: Option[A] =
     foldRight(None: Option[A])((h, _) => Some(h))
 
-  // 5.7 map, filter, append, flatmap using foldRight. Part of the exercise is
-  // writing your own function signatures
+  // Exercise 5.7 map, filter, append, flatmap using foldRight.
+  // Part of the exercise is writing your own function signatures
   def mapRecursive[B](f: A => B): Stream[B] = this match {
     case Cons(h, t) => cons(f(h()), t().mapRecursive(f))
     case _ => empty
@@ -198,10 +198,13 @@ sealed trait Stream[+A] {
   def filter(p: A => Boolean): Stream[A] =
     foldRight(empty[A])((h, acc) => if (p(h)) cons(h, acc) else acc)
 
-  def appendElem[B >: A](e: => B): Stream[B] =
-    foldRight(empty[B])((h, acc) => if (acc == Empty) cons(h, Stream(e)) else cons(h, acc))
+  def appendElemIncorrect[B >: A](e: => B): Stream[B] = {
+    foldRight(empty[B])((h, acc) => {
+      if (acc == Empty) cons(h, Stream(e)) else cons(h, acc)
+    })
+  }
 
-  def appendElemTextbook[B >: A](e: => B): Stream[B] =
+  def appendElem[B >: A](e: => B): Stream[B] =
     foldRight(Stream(e))((h, acc) => cons(h, acc))
 
   def flatMap[B](f: A => Stream[B]): Stream[B] =
@@ -214,13 +217,142 @@ sealed trait Stream[+A] {
   def flatMapTextbook[B](f: A => Stream[B]): Stream[B] =
     foldRight(empty[B])((h, acc) => f(h) append acc)
 
-  def startsWith[B](s: Stream[B]): Boolean = ???
-
   @annotation.tailrec
   final def find(f: A => Boolean): Option[A] = this match {
     case Empty => None
     case Cons(h, t) => if (f(h())) Some(h()) else t().find(f)
   }
+
+  final def findAlternative(f: A => Boolean): Option[A] =
+    this.filter(f).headOption
+
+  // Exercise 5.13
+  def mapViaUnfold[B](f: A => B): Stream[B] =
+    unfoldTextbook(this) {
+      case Cons(h, t) => Some(f(h()), t())
+      case _ => None
+    }
+
+  def takeViaUnfold(n: Int): Stream[A] =
+    unfoldTextbook((this, n)) {
+      case (a, n) if n > 0 => a match {
+        case Cons(h, t) => Some(h(), (t(), n - 1))
+        case _ => None
+      }
+      case _ => None
+    }
+
+  def takeViaUnfoldTextbook(n: Int): Stream[A] =
+    unfoldTextbook((this, n)) {
+      case (Cons(h, _), 1) => Some((h(), (empty, 0)))
+      case (Cons(h, t), n) if n > 1 => Some((h(), (t(), n - 1)))
+      case _ => None
+    }
+
+  def takeWhileViaUnfold(p: A => Boolean): Stream[A] =
+    unfoldTextbook(this) {
+      case Cons(h, t) => if (p(h())) Some(h(), t()) else None
+      case _ => None
+    }
+
+  def takeWhileViaUnfoldTextbook(f: A => Boolean): Stream[A] =
+    unfoldTextbook(this) {
+      case Cons(h, t) if f(h()) => Some((h(), t()))
+      case _ => None
+    }
+
+  def zipWith[B, C](s2: Stream[B])(f: (A, B) => C): Stream[C] =
+    unfoldTextbook((this, s2)) {
+      case (Cons(h1, t1), Cons(h2, t2)) => Some(f(h1(), h2()), (t1(), t2()))
+      case _ => None
+    }
+
+  def zipAll[B](s2: Stream[B]): Stream[(Option[A], Option[B])] =
+    unfoldTextbook((this, s2)) {
+      case (Cons(h1, t1), Cons(h2, t2)) => Some((Some(h1()), Some(h2())), (t1(), t2()))
+      case (Cons(h1, t1), _) => Some((Some(h1()), None), (t1(), Empty))
+      case (_, Cons(h2, t2)) => Some((None, Some(h2())), (Empty, t2()))
+      case _ => None
+    }
+
+  // Textbook answers
+  def zipTextbook[B](s2: Stream[B]): Stream[(A, B)] =
+    zipWith(s2)((_, _))
+
+  def zipAllTextbook[B](s2: Stream[B]): Stream[(Option[A], Option[B])] =
+    zipWithAllTextbook(s2)((_, _))
+
+  def zipWithAllTextbook[B, C](s2: Stream[B])(f: (Option[A], Option[B]) => C): Stream[C] =
+    unfoldTextbook((this, s2)) {
+      case (Empty, Empty) => None
+      case (Cons(h, t), Empty) => Some(f(Some(h()), Option.empty[B]) -> (t(), empty[B]))
+      case (Empty, Cons(h, t)) => Some(f(Option.empty[A], Some(h())) -> (empty[A] -> t()))
+      case (Cons(h1, t1), Cons(h2, t2)) => Some(f(Some(h1()), Some(h2())) -> (t1() -> t2()))
+    }
+
+  // Exercise 5.14
+  def startsWith[A](s: Stream[A]): Boolean = {
+    this.zipAll(s).forAll {
+      case (Some(a1), Some(a2)) if a1 == a2 => true
+      case (_, None) => true
+      case _ => false
+    }
+  }
+
+  /*
+  `s startsWith s2` when corresponding elements of `s` and `s2` are all equal, until the point that `s2` is exhausted.
+  If `s` is exhausted first, or we find an element that doesn't match, we terminate early. Using non-strictness,
+  we can compose these three separate logical steps--the zipping, the termination when the second stream is exhausted,
+  and the termination if a non-matching element is found or the first stream is exhausted.
+  */
+  def startsWithTextbook[A](s: Stream[A]): Boolean =
+    zipAll(s).takeWhile(_._2.isDefined).forAll({
+      case (h, h2) => h == h2
+    })
+
+  // Exercise 5.15
+  def tails: Stream[Stream[A]] = {
+    unfoldTextbook(cons(null.asInstanceOf[A], this)) {
+      case Cons(_, t) => Some((t(), t()))
+      case Empty => None
+    }
+  }
+
+  // The last element of `tails` is always the empty `Stream`, so we handle this
+  // as a special case, by appending it to the output.
+  def tailsTextbook: Stream[Stream[A]] =
+    unfoldTextbook(this) {
+      case Empty => None
+      case s => Some((s, s drop 1))
+    } append Stream(empty)
+
+  def hasSubsequence[B](s: Stream[B]): Boolean =
+    tails.exists(_ startsWith s)
+
+  // Exercise 5.16
+  // This isn't efficient
+  def scanRightInefficient[B](z: B)(f: (A, => B) => B): Stream[B] = {
+    tailsTextbook.map(_.foldRight(z)(f))
+  }
+
+  // This is better
+  def scanRight[B](z: B)(f: (A, => B) => B): Stream[B] =
+    foldRight(Stream(z))((x, y) => cons(f(x, y.headOption.get), y))
+
+  // The function can't be implemented using `unfold`, since `unfold` generates elements of the `Stream`
+  // from left to right. It can be implemented using `foldRight` though.
+
+  // The implementation is just a `foldRight` that keeps the accumulated value and the stream of intermediate results,
+  // which we `cons` onto during each iteration. When writing folds, it's common to have more state in the fold than
+  // is needed to compute the result. Here, we simply extract the accumulated list once finished.
+
+  def scanRightTextbook[B](z: B)(f: (A, => B) => B): Stream[B] =
+    foldRight((z, Stream(z)))((a, p0) => {
+      // p0 is passed by-name and used in by-name args in f and cons. So use lazy val to ensure only one evaluation...
+      lazy val p1 = p0
+      val b2 = f(a, p1._1)
+      (b2, cons(b2, p1._2))
+    })._2
 }
 
 case object Empty extends Stream[Nothing]
@@ -240,11 +372,67 @@ object Stream {
     if (as.isEmpty) empty
     else cons(as.head, apply(as.tail: _*))
 
+  // Recursive stream of 1's
   val ones: Stream[Int] = Stream.cons(1, ones)
 
-  def from(n: Int): Stream[Int] = ???
+  // Exercise 5.8
+  def constant[A](a: A): Stream[A] = Stream.cons(a, constant(a))
 
-  def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] = ???
+  def constantTextbook[A](a: A): Stream[A] = {
+    lazy val tail: Stream[A] = Cons(() => a, () => tail)
+    tail
+  }
+
+  // Exercise 5.9
+  def from(n: Int): Stream[Int] = Stream.cons(n, from(n + 1))
+
+  // Exercise 5.10
+  def fibs(a: Int = 0, b: Int = 1): Stream[Int] = Stream.cons(a, fibs(b, a + b))
+
+  val fibsTextbook = {
+    def go(f0: Int, f1: Int): Stream[Int] =
+      cons(f0, go(f1, f0 + f1))
+
+    go(0, 1)
+  }
+
+  // Exercise 5.11
+  def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] = {
+    def go(z: S, acc: Stream[A]): Stream[A] = {
+      f(z) match {
+        case Some((a, s)) => cons(a, unfold(s)(f))
+        case None => acc
+      }
+    }
+
+    go(z, Empty)
+  }
+
+  def unfoldTextbook[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] =
+    f(z) match {
+      case Some((h, s)) => cons(h, unfold(s)(f))
+      case None => empty
+    }
+
+  // Exercise 5.12
+  val fibsViaUnfold: Stream[Int] =
+    unfoldTextbook((0, 1)) { case (i, j) => Some(i, (j, i + j)) }
+
+  val fibsViaUnfoldVerbose: Stream[Int] =
+    unfoldTextbook((0, 1))(
+      p => p match {
+        case (i, j) => Some(i, (j, i + j))
+      }
+    )
+
+  def fromViaUnfold(n: Int): Stream[Int] =
+    unfoldTextbook(n)(n => Some(n, n + 1))
+
+  def constantViaUnfold[A](a: A): Stream[A] =
+    unfoldTextbook(a)(_ => Some(a, a))
+
+  val onesViaUnfold: Stream[Int] =
+    unfoldTextbook(1)(_ => Some(1, 1))
 }
 
 object StreamTests {
@@ -269,5 +457,9 @@ object StreamTests {
 
   def main(args: Array[String]): Unit = {
     testHeadOption()
+    println(List(1, 2, 3).zip(List(4, 5, 6)))
+    println(List(1, 2, 3).zip(List(4, 5)))
+    println(List(1, 2, 3).zip(List()))
+    println(List().zip(List(1, 2, 3)))
   }
 }
