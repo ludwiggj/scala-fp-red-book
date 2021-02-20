@@ -17,6 +17,9 @@ lazy val exercises = (project in file("exercises"))
     name := "exercises",
     libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.2",
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test",
+    libraryDependencies += "org.scalatestplus" %% "scalacheck-1-15" % "3.2.2.0" % "test",
+    libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3",
+    libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
     logBuffered in Test := false
 )
 
