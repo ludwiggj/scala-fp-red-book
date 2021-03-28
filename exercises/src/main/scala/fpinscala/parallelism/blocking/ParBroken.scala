@@ -1,11 +1,11 @@
-package fpinscala.parallelism
+package fpinscala.parallelism.blocking
 
 import java.util.concurrent._
-import language.implicitConversions
 import scala.annotation.tailrec
+import scala.language.implicitConversions
 
-// NOTE - This version of Par won't return a result, as run does not actually execute the computation
-object Par {
+// NOTE - This version of Par doesn't work, not 100% sure why e.g. call from unit never returns
+object ParBroken {
   type Par[A] = ExecutorService => Future[A]
 
   def run[A](s: ExecutorService)(a: Par[A]): Future[A] = a(s)
@@ -14,12 +14,14 @@ object Par {
   // `unit` is represented as a function that returns a `UnitFuture`, which is a simple implementation of `Future`
   // that just wraps a constant value. It doesn't use the `ExecutorService` at all. It's always done and can't be
   // cancelled. Its `get` method simply returns the value that we gave it.
-  def unit[A](a: A): Par[A] = (es: ExecutorService) => UnitFuture(a)
+  def unit[A](a: A): Par[A] = _ => UnitFuture(a)
 
-  private case class UnitFuture[A](get: A) extends Future[A] {
+  private case class UnitFuture[A](a: A) extends Future[A] {
     def isDone = true
 
-    def get(timeout: Long, units: TimeUnit): A = get
+    def get(timeout: Long, units: TimeUnit): A = get()
+
+    def get(): A = a
 
     def isCancelled = false
 
@@ -193,7 +195,7 @@ object Par {
       unit(ints.headOption getOrElse 0)
     } else {
       val (l, r) = ints.splitAt(ints.length / 2)
-      Par.map2(Par.sum(l), Par.sum(r))(_ + _)
+      ParBroken.map2(ParBroken.sum(l), ParBroken.sum(r))(_ + _)
     }
 
   // sum generalised in terms of arguments
@@ -204,7 +206,7 @@ object Par {
       unit(z)
     } else {
       val (l, r) = ints.splitAt(ints.length / 2)
-      Par.map2(Par.fold1(l)(z)(f), Par.fold1(r)(z)(f))(f)
+      ParBroken.map2(ParBroken.fold1(l)(z)(f), ParBroken.fold1(r)(z)(f))(f)
     }
   }
 
@@ -216,7 +218,7 @@ object Par {
       unit(z)
     } else {
       val (l, r) = items.splitAt(items.length / 2)
-      Par.map2(Par.fold2(l)(z)(f), Par.fold2(r)(z)(f))(f)
+      ParBroken.map2(ParBroken.fold2(l)(z)(f), ParBroken.fold2(r)(z)(f))(f)
     }
 
   // sum implemented in terms of folds
@@ -246,7 +248,7 @@ object Par {
       unit(input.headOption.map(_.split(" ").length).getOrElse(0))
     else {
       val (l, r) = input.splitAt(input.length / 2)
-      Par.map2(Par.wc2(l), Par.wc2(r))(_ + _)
+      ParBroken.map2(ParBroken.wc2(l), ParBroken.wc2(r))(_ + _)
     }
   }
 
@@ -256,7 +258,7 @@ object Par {
       unit(f(input.headOption))
     else {
       val (l, r) = input.splitAt(input.length / 2)
-      Par.map2(Par.wc3(l)(f)(g), Par.wc3(r)(f)(g))(g)
+      ParBroken.map2(ParBroken.wc3(l)(f)(g), ParBroken.wc3(r)(f)(g))(g)
     }
   }
 
@@ -266,7 +268,7 @@ object Par {
       unit(f(input.headOption))
     else {
       val (l, r) = input.splitAt(input.length / 2)
-      Par.map2(Par.wc4(l)(f)(g), Par.wc4(r)(f)(g))(g)
+      ParBroken.map2(ParBroken.wc4(l)(f)(g), ParBroken.wc4(r)(f)(g))(g)
     }
   }
 
@@ -327,11 +329,11 @@ object Par {
   // Thread pool size 1
   val a: Par[Int] = lazyUnit(42 + 1)
   val S: ExecutorService = Executors.newFixedThreadPool(1)
-  val x: Boolean = Par.equal(S)(a, fork(a))
+  val x: Boolean = ParBroken.equal(S)(a, fork(a))
 
   // Thread pool size 2
   val T: ExecutorService = Executors.newFixedThreadPool(2)
-  val y: Boolean = Par.equal(S)(a, fork(fork(a)))
+  val y: Boolean = ParBroken.equal(S)(a, fork(fork(a)))
 
   // and so on....
 
@@ -361,7 +363,7 @@ object Par {
   }
 
   def choiceViaChoiceN[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] =
-    choiceN(Par.map(cond)(b => if (b) 0 else 1))(List(t, f))
+    choiceN(ParBroken.map(cond)(b => if (b) 0 else 1))(List(t, f))
 
   // Exercise 7.12
   def choiceMap[K,V](key: Par[K])(choices: Map[K, Par[V]]): Par[V] =

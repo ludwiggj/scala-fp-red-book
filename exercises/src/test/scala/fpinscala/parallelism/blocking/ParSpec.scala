@@ -1,11 +1,11 @@
-package fpinscala.parallelism
+package fpinscala.parallelism.blocking
 
 import fpinscala.UnitSpec
-import fpinscala.parallelism.ParCompletableFuture.{chooser, _}
+import fpinscala.parallelism.blocking.Par._
 
 import java.util.concurrent.{Callable, ExecutorService, Executors}
 
-class ParCompletableFutureSpec extends UnitSpec {
+class ParSpec extends UnitSpec {
   final val unorderedList = List(1, 4, 2, 3, 5)
 
   final val exampleParagraphs = List(
@@ -47,19 +47,19 @@ class ParCompletableFutureSpec extends UnitSpec {
   "unit" should "return argument on get" in {
     val service = getService(1)
 
-    assert(ParCompletableFuture.unit("no")(service).get() == "no")
+    assert(unit("no")(service).get() == "no")
   }
 
   "run" should "return computation" in {
     val service = getService(1)
 
-    assert(ParCompletableFuture.run(service)(unit("maybe")).get() == "maybe")
+    assert(Par.run(service)(unit("maybe")).get() == "maybe")
   }
 
   "lazyUnit" should "run if 2 threads are available" in {
     val service = getService(2)
 
-    assert(ParCompletableFuture.run(service)(lazyUnit("we'll see")).get() == "we'll see")
+    assert(Par.run(service)(lazyUnit("we'll see")).get() == "we'll see")
   }
 
   "parSort" should "sort in parallel" in {
@@ -67,21 +67,21 @@ class ParCompletableFutureSpec extends UnitSpec {
 
     val expected = List(1, 2, 3, 4, 5)
 
-    assert(ParCompletableFuture.run(service)(parSort(unit(unorderedList))).get() == expected)
-    assert(ParCompletableFuture.run(service)(parSort2(unit(unorderedList))).get() == expected)
+    assert(Par.run(service)(parSort(unit(unorderedList))).get() == expected)
+    assert(Par.run(service)(parSort2(unit(unorderedList))).get() == expected)
   }
 
   it should "sort in parallel with more threads" in {
     val service = getService(3)
 
     val expected = List(1, 2, 3, 4, 5)
-    assert(ParCompletableFuture.run(service)(parSort3(unit(unorderedList))).get() == expected)
+    assert(Par.run(service)(parSort3(unit(unorderedList))).get() == expected)
   }
 
   "map" should "map elements" in {
     val service = getService(1)
 
-    assert(ParCompletableFuture.run(service)(unit(unorderedList).map(_.map(_ * 2))).get() == List(2, 8, 4, 6, 10))
+    assert(Par.run(service)(unit(unorderedList).map(_.map(_ * 2))).get() == List(2, 8, 4, 6, 10))
   }
 
   "sequence" should "sequence computations using 1 thread" in {
@@ -89,12 +89,12 @@ class ParCompletableFutureSpec extends UnitSpec {
     val input = List(unit(2), unit(4), unit(6), unit(8))
     val expected = List(2, 4, 6, 8)
 
-    assert(ParCompletableFuture.run(service)(sequence(input)).get() == expected)
+    assert(Par.run(service)(sequence(input)).get() == expected)
 
     // NOTE - Result comes out in reverse order for this method
-    assert(ParCompletableFuture.run(service)(sequence2(input)).get().reverse == expected)
+    assert(Par.run(service)(sequence2(input)).get().reverse == expected)
 
-    assert(ParCompletableFuture.run(service)(sequence_simpleTextbook(input)).get() == expected)
+    assert(Par.run(service)(sequence_simpleTextbook(input)).get() == expected)
   }
 
   it should "sequence computations using 5 threads if fork is called" in {
@@ -102,43 +102,43 @@ class ParCompletableFutureSpec extends UnitSpec {
     val input = List(unit(2), unit(4), unit(6), unit(8))
     val expected = List(2, 4, 6, 8)
 
-    assert(ParCompletableFuture.run(service)(sequenceRightTextbook(input)).get() == expected)
+    assert(Par.run(service)(sequenceRightTextbook(input)).get() == expected)
 
     // NOTE - Result comes out in reverse order for this method
-    assert(ParCompletableFuture.run(service)(sequenceBalancedTextbook(input.toIndexedSeq)).get() == List(2, 4, 6, 8))
+    assert(Par.run(service)(sequenceBalancedTextbook(input.toIndexedSeq)).get() == List(2, 4, 6, 8))
 
-    assert(ParCompletableFuture.run(service)(sequenceTextbook(input)).get() == List(2, 4, 6, 8))
+    assert(Par.run(service)(sequenceTextbook(input)).get() == List(2, 4, 6, 8))
   }
 
   "parMap" should "map elements in parallel" in {
     val service = getService(10)
 
-    assert(ParCompletableFuture.run(service)(parMap(unorderedList)(_ * 2)).get() == List(2, 8, 4, 6, 10))
+    assert(Par.run(service)(parMap(unorderedList)(_ * 2)).get() == List(2, 8, 4, 6, 10))
   }
 
   "parFilter" should "filter elements in parallel" in {
     val service = getService(2)
     val expected = List(4, 2)
 
-    assert(ParCompletableFuture.run(service)(parFilter(unorderedList)(_ % 2 == 0)).get() == expected)
-    assert(ParCompletableFuture.run(service)(parFilter2(unorderedList)(_ % 2 == 0)).get() == expected)
+    assert(Par.run(service)(parFilter(unorderedList)(_ % 2 == 0)).get() == expected)
+    assert(Par.run(service)(parFilter2(unorderedList)(_ % 2 == 0)).get() == expected)
   }
 
   "sum" should "return element total" in {
     val service = getService(1)
     val input = unorderedList.toIndexedSeq
 
-    assert(ParCompletableFuture.run(service)(sum(input)).get() == 15)
-    assert(ParCompletableFuture.run(service)(sumViaFold1(input)).get() == 15)
-    assert(ParCompletableFuture.run(service)(sumViaFold2(input)).get() == 15)
+    assert(Par.run(service)(sum(input)).get() == 15)
+    assert(Par.run(service)(sumViaFold1(input)).get() == 15)
+    assert(Par.run(service)(sumViaFold2(input)).get() == 15)
   }
 
   "max" should "return largest element" in {
     val service = getService(1)
     val input = IndexedSeq(2, 5, -12, 3, 0)
 
-    assert(ParCompletableFuture.run(service)(maxValueViaFold1(input)).get() == 5)
-    assert(ParCompletableFuture.run(service)(maxValueViaFold2(input)).get() == 5)
+    assert(Par.run(service)(maxValueViaFold1(input)).get() == 5)
+    assert(Par.run(service)(maxValueViaFold2(input)).get() == 5)
   }
 
   "wordCount" should "return number of words in paragraphs" in {
@@ -146,62 +146,62 @@ class ParCompletableFutureSpec extends UnitSpec {
     val expectedCount = 183
 
     assert(wc1(exampleParagraphs) == expectedCount)
-    assert(ParCompletableFuture.run(service)(wc2(exampleParagraphs)).get() == expectedCount)
-    assert(ParCompletableFuture.run(service)(wc3(exampleParagraphs)(_.split(" ").length)(_ + _)).get() == expectedCount)
-    assert(ParCompletableFuture.run(service)(wordCount(exampleParagraphs)).get() == expectedCount)
+    assert(Par.run(service)(wc2(exampleParagraphs)).get() == expectedCount)
+    assert(Par.run(service)(wc3(exampleParagraphs)(_.split(" ").length)(_ + _)).get() == expectedCount)
+    assert(Par.run(service)(wordCount(exampleParagraphs)).get() == expectedCount)
   }
 
   "map3" should "map 3 Pars together" in {
     val service = getService(1)
     assert(
-      ParCompletableFuture.run(service)(map3(unit("Three "), unit("Blind "), unit("Mice"))(_ + _ + _)).get()
+      Par.run(service)(map3(unit("Three "), unit("Blind "), unit("Mice"))(_ + _ + _)).get()
         == "Three Blind Mice"
     )
   }
 
   "map4" should "map 4 Pars together" in {
     val service = getService(1)
-    assert(ParCompletableFuture.run(service)(map4(unit(4), unit(3), unit(2), unit(1))(_ * _ * _ * _)).get() == 24)
+    assert(Par.run(service)(map4(unit(4), unit(3), unit(2), unit(1))(_ * _ * _ * _)).get() == 24)
   }
 
   "map5" should "map 5 Pars together" in {
     val service = getService(1)
-    assert(ParCompletableFuture.run(service)(map5(unit(5), unit(4), unit(3), unit(2), unit(1))(_ + _ + _ + _ + _)).get() == 15)
+    assert(Par.run(service)(map5(unit(5), unit(4), unit(3), unit(2), unit(1))(_ + _ + _ + _ + _)).get() == 15)
   }
 
   "equal" should "return true if Pars return equal values" in {
     val service = getService(1)
-    assert(ParCompletableFuture.equal(service)(unit(2 + 2), unit(3 + 1)))
+    assert(Par.equal(service)(unit(2 + 2), unit(3 + 1)))
   }
 
   it should "return false if Pars return unequal values" in {
     val service = getService(1)
-    assert(!ParCompletableFuture.equal(service)(unit(2 + 1), unit(3 + 1)))
+    assert(!Par.equal(service)(unit(2 + 1), unit(3 + 1)))
   }
 
   "choice" should "return first option if argument is true" in {
     val service = getService(2)
-    assert(ParCompletableFuture.run(service)(choice(unit(true))(unit("yes"), unit("no"))).get() == "yes")
-    assert(ParCompletableFuture.run(service)(choiceViaChoiceN(unit(true))(unit("yes"), unit("no"))).get() == "yes")
-    assert(ParCompletableFuture.run(service)(choiceViaChooser(unit(true))(unit("yes"), unit("no"))).get() == "yes")
+    assert(Par.run(service)(choice(unit(true))(unit("yes"), unit("no"))).get() == "yes")
+    assert(Par.run(service)(choiceViaChoiceN(unit(true))(unit("yes"), unit("no"))).get() == "yes")
+    assert(Par.run(service)(choiceViaChooser(unit(true))(unit("yes"), unit("no"))).get() == "yes")
   }
 
   it should "return second option if argument is false" in {
     val service = getService(2)
-    assert(ParCompletableFuture.run(service)(choice(unit(false))(unit("yes"), unit("no"))).get() == "no")
-    assert(ParCompletableFuture.run(service)(choiceViaChoiceN(unit(false))(unit("yes"), unit("no"))).get() == "no")
-    assert(ParCompletableFuture.run(service)(choiceViaChooser(unit(false))(unit("yes"), unit("no"))).get() == "no")
+    assert(Par.run(service)(choice(unit(false))(unit("yes"), unit("no"))).get() == "no")
+    assert(Par.run(service)(choiceViaChoiceN(unit(false))(unit("yes"), unit("no"))).get() == "no")
+    assert(Par.run(service)(choiceViaChooser(unit(false))(unit("yes"), unit("no"))).get() == "no")
   }
 
   "choiceN" should "return selected option" in {
     val service = getService(2)
-    assert(ParCompletableFuture.run(service)(choiceN(unit(1))(List(unit(3), unit(2), unit(1)))).get() == 2)
-    assert(ParCompletableFuture.run(service)(choiceNViaChooser(unit(1))(List(unit(3), unit(2), unit(1)))).get() == 2)
+    assert(Par.run(service)(choiceN(unit(1))(List(unit(3), unit(2), unit(1)))).get() == 2)
+    assert(Par.run(service)(choiceNViaChooser(unit(1))(List(unit(3), unit(2), unit(1)))).get() == 2)
   }
 
   "choiceMap" should "return selected option" in {
     val service = getService(2)
-    assert(ParCompletableFuture.run(service)(choiceMap(unit("brown"))(Map(
+    assert(Par.run(service)(choiceMap(unit("brown"))(Map(
       "how" -> unit(3),
       "now" -> unit(3),
       "brown" -> unit(5),
@@ -222,15 +222,15 @@ class ParCompletableFutureSpec extends UnitSpec {
       case "violet" => unit(7)
     }
 
-    assert(ParCompletableFuture.run(service)(chooser(unit("green"))(choose)).get() == 4)
-    assert(ParCompletableFuture.run(service)(flatMap(unit("green"))(choose)).get() == 4)
+    assert(Par.run(service)(chooser(unit("green"))(choose)).get() == 4)
+    assert(Par.run(service)(flatMap(unit("green"))(choose)).get() == 4)
   }
 
   "join" should "join computations" in {
     val service = getService(2)
 
-    assert(ParCompletableFuture.run(service)(join(unit(unit(1)))).get() == 1)
-    assert(ParCompletableFuture.run(service)(joinViaFlatmap(unit(unit(1)))).get() == 1)
-    assert(ParCompletableFuture.run(service)(joinAlternative(unit(unit(1)))).get() == 1)
+    assert(Par.run(service)(join(unit(unit(1)))).get() == 1)
+    assert(Par.run(service)(joinViaFlatmap(unit(unit(1)))).get() == 1)
+    assert(Par.run(service)(joinAlternative(unit(unit(1)))).get() == 1)
   }
 }

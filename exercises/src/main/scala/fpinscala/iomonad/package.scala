@@ -3,7 +3,8 @@ package fpinscala
 import language.higherKinds
 
 package object iomonad {
-  import fpinscala.parallelism.ParNonblocking._
+  import fpinscala.parallelism.nonblocking.Par._
+  import fpinscala.parallelism.nonblocking.Par
 
   type IO[A] = IO3.IO[A]
   def IO[A](a: => A): IO[A] = IO3.IO[A](a)

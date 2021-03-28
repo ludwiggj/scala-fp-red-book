@@ -1,4 +1,4 @@
-package fpinscala.parallelism
+package fpinscala.parallelism.blocking
 
 import java.util.concurrent._
 import scala.annotation.tailrec
@@ -11,7 +11,7 @@ class CompletableOnGetFuture[A](completedValue: A) extends CompletableFuture[A] 
   }
 }
 
-object ParCompletableFuture {
+object Par {
   val NO_OF_THREADS: Int = 10
 
   type Par[A] = ExecutorService => Future[A]
@@ -305,9 +305,9 @@ object ParCompletableFuture {
 
   // infix versions of `map`, `map2`
   class ParOps[A](p: Par[A]) {
-    def map[B](f: A => B): Par[B] = ParCompletableFuture.map(p)(f)
+    def map[B](f: A => B): Par[B] = Par.map(p)(f)
 
-    def map2[B, C](b: Par[B])(f: (A, B) => C): Par[C] = ParCompletableFuture.map2(p, b)(f)
+    def map2[B, C](b: Par[B])(f: (A, B) => C): Par[C] = Par.map2(p, b)(f)
 
     def zip[B](b: Par[B]): Par[(A, B)] = p.map2(b)((_, _))
   }

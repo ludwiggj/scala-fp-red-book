@@ -45,6 +45,13 @@ object RNG extends LazyLogging {
     }
   }
 
+  // Required for exercise 8.5
+  def boolean(rng:RNG): (Boolean, RNG) = {
+    val (i, r1) = nonNegativeInt(rng)
+    val b = if (i % 2 == 0) true else false
+    (b, r1)
+  }
+
   // We need to be quite careful not to skew the generator.
   // Since `Int.Minvalue` is 1 smaller than `-(Int.MaxValue)`,
   // it suffices to increment the negative numbers by 1 and make them positive.

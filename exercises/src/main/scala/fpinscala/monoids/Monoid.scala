@@ -1,7 +1,7 @@
 package fpinscala.monoids
 
-import fpinscala.parallelism.ParNonblocking._
-import fpinscala.parallelism.ParNonblocking.Par.toParOps // infix syntax for `Par.map`, `Par.flatMap`, etc
+import fpinscala.parallelism.nonblocking.Par._
+import fpinscala.parallelism.nonblocking.Par.toParOps // infix syntax for `Par.map`, `Par.flatMap`, etc
 import language.higherKinds
 
 trait Monoid[A] {
@@ -41,7 +41,6 @@ object Monoid {
   // data type from Part 2.
 
   import fpinscala.testing._
-  import Prop._
   def monoidLaws[A](m: Monoid[A], gen: Gen[A]): Prop = ???
 
   def trimMonoid(s: String): Monoid[String] = ???
