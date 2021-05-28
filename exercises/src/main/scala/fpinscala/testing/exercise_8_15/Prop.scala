@@ -5,8 +5,8 @@ import fpinscala.state.RNG
 import fpinscala.testing.take2.Constants.{FailedCase, MaxSize, SuccessCount, TestCases}
 import fpinscala.testing.take2.{Gen, SGen}
 import fpinscala.testing.take2.Gen.randomStream
-import fpinscala.testing.take2.SGen.listOfLAlternative
 
+// TODO - More work needed here!
 sealed trait Result {
   def isFalsified: Boolean
 }
@@ -117,15 +117,5 @@ object Prop {
 
   def check(p: => Boolean): Prop = Prop {
     (_, _, _) => if (p) Proved else Falsified("()", 0)
-  }
-
-  val smallInt: Gen[Int] = Gen.choose(-10, 10)
-
-  val maxPropTrue = forAll(listOfLAlternative(smallInt)) { ns =>
-    !ns.exists(_ > ns.max)
-  }
-
-  val maxPropFalse = forAll(listOfLAlternative(smallInt)) { ns =>
-    !ns.exists(_ >= ns.max)
   }
 }

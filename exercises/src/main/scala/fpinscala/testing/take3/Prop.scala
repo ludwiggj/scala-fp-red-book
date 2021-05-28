@@ -189,7 +189,6 @@ object Prop {
     forAll(gES ** ga) { case s ** a => f(a)(s).get() }
 
   def forAllPar[A](g: Gen[A])(f: A => Par[Boolean]): Prop =
-  //    forAll(S ** g) { case s ** a => f(a)(s).get() }
     forAllPar(S)(g)(f)
 
   def checkPar(p: => Par[Boolean]): Prop =
@@ -204,7 +203,7 @@ object Prop {
     )
   }
 
-  // Another law for Par:
+  // Another law for Par (page 141):
 
   // map(unit(x))(f) == unit(f(x))
 
@@ -217,11 +216,17 @@ object Prop {
 
   val genParInt: Gen[Par[Int]] = Gen.choose(0, 10).map(Par.unit)
 
-  /* A `Gen[Par[Int]]` generated from a list summation that spawns a new parallel
-  * computation for each element of the input list summed to produce the final
-  * result. This is not the most compelling example, but it provides at least some
-  * variation in structure to use for testing.
-  */
+  def parLaw[A](ga: Gen[Par[A]]): Prop =
+    forAllPar(ga)(n => equal(Par.map(n) { y => y }, n))
+
+  val parMapLaw1: Prop = parLaw(genParInt)
+
+  // Exercise 8.16
+  // A richer generator for Par[Int], which builds more deeply nested parallel computations
+
+  // A `Gen[Par[Int]]` generated from a list summation that spawns a new parallel computation for each element
+  // of the input list summed to produce the final result. This is not the most compelling example, but it
+  // provides at least some variation in structure to use for testing.
   val genParInt2: Gen[Par[Int]] = choose(-100, 100).listOfN(choose(0, 5)).map(l =>
     l.foldLeft(Par.unit(0))((p, i) =>
       // Need to make sure we have enough threads to handle the forks
@@ -232,24 +237,26 @@ object Prop {
   def parLaw[A](gES: Gen[ExecutorService], ga: Gen[Par[A]]): Prop =
     forAllPar(gES)(ga)(n => equal(Par.map(n) { y => y }, n))
 
-  val parMapLaw1: Prop = parLaw(S, genParInt)
-
   val parMapLaw2: Prop = parLaw(weightedExecutorServiceGen(start = 10, stopExclusive = 15), genParInt2)
 
   // Exercise 8.17
+  def forkLaw[A](ga: Gen[Par[A]]): Prop =
+    forAllPar(ga)(n => equal(Par.fork(n), n))
+
   def forkLaw[A](gES: Gen[ExecutorService], ga: Gen[Par[A]]): Prop =
     forAllPar(gES)(ga)(n => equal(Par.fork(n), n))
 
-  val parForkLaw1: Prop = forkLaw(S, genParInt)
+  val parForkLaw1: Prop = forkLaw(genParInt)
 
   val parForkLaw2: Prop = forkLaw(weightedExecutorServiceGen(start = 10, stopExclusive = 15), genParInt2)
 
   // Exercise 8.18
+
   // takeWhile properties
 
   // Length should be between 0 and length of list
-  // Length if none satisfy predicate is 0
-  // Length if all satisfy predicate is n
+  // Length is 0 if no elements satisfy predicate
+  // Length is n if all elements satisfy predicate
   // If length of result < input, element at (result.length + 1) fails the predicate
 
   // takeWhile and dropWhile
@@ -260,12 +267,14 @@ object Prop {
 
   // (1, 2, 3, 4, 5)
 
-  // takeWhile(x < 3) = (1, 2)
-  // takeWhile(!(x < 3)) = ()
-  // dropWhile(x < 3) = (3, 4, 5)
-  // dropWhile(!(x < 3)) = (1, 2, 3, 4, 5)
-  // takeWhile(even)  = ()
-  // dropWhile(even)  = (1, 2, 3, 4, 5)
+  // takeWhile(x < 3) ++ dropWhile(x < 3) = (1, 2, 3, 4, 5)
+  //    (1, 2)        ++    (3, 4, 5)     = (1, 2, 3, 4, 5)
+
+  // takeWhile(!(x < 3)) ++ dropWhile(!(x < 3)) = (1, 2, 3, 4, 5)
+  //         ()          ++    (1, 2, 3, 4, 5)  = (1, 2, 3, 4, 5)
+
+  // takeWhile(even) ++ dropWhile(even) = (1, 2, 3, 4, 5)
+  //       ()        ++ (1, 2, 3, 4, 5) = (1, 2, 3, 4, 5)
 
   // Answer (I effectively covered this):
 
@@ -275,7 +284,7 @@ object Prop {
   // There are various ways to state this, but the general idea is that the remaining list, if non-empty,
   // should start with an element that does _not_ satisfy the predicate.
 
-  // A property for takeWhile:
+  // A property for takeWhile (page 143):
 
   private val isEven = (i: Int) => i % 2 == 0
 
@@ -287,6 +296,7 @@ object Prop {
     g map (i => _ => i)
 
   // Exercise 8.19
+
   // Generate a function that uses its argument in some way to select which int (boolean?) to return
 
   def genBooleanFn[A](choices: A => Boolean): Gen[A => Boolean] =
@@ -297,22 +307,29 @@ object Prop {
     a.map(threshold => aa => aa < threshold)
   }
 
-  private val smallerThan = smallerThanGen(smallInt)
+  type OrderedView[T] = T => Ordered[T]
+  def smallerThanGen2[A : OrderedView](a: Gen[A]): Gen[A => Boolean] = {
+    a.map(threshold => aa => aa < threshold)
+  }
+
+  private val smallerThan: Gen[Int => Boolean] = smallerThanGen(smallInt)
 
   val takeWhileProp2: Prop = Prop.forAll(Gen.listOfN(5, smallInt) ** smallerThan) { case (ns, fn) =>
     ns.takeWhile(fn).forall(fn)
   }
 
-  private val chars = (' ' to '~').toList
-  val charGen: Gen[Char] = choose(0, chars.size).map(chars(_))
-
-  def stringGen(length: Int): Gen[String] = Gen.listOfN(length, charGen).map(_.mkString)
-
-  def largerThanGen[A](a: Gen[A])(implicit ev: A => Ordered[A]): Gen[A => Boolean] = {
+  def largerThanGen[A : OrderedView](a: Gen[A]): Gen[A => Boolean] = {
     a.map(threshold => aa => aa > threshold)
   }
 
-  private val largerThan = largerThanGen(stringGen(5))
+  def stringGen(length: Int): Gen[String] = {
+    val chars = (' ' to '~').toList
+    val charGen: Gen[Char] = choose(0, chars.size).map(chars(_))
+
+    Gen.listOfN(length, charGen).map(_.mkString)
+  }
+
+  private val largerThan: Gen[String => Boolean] = largerThanGen(stringGen(5))
 
   val takeWhileProp3: Prop = Prop.forAll(Gen.listOfN(5, stringGen(5)) ** largerThan) { case (ns, fn) =>
     ns.takeWhile(fn).forall(fn)
@@ -349,21 +366,26 @@ object Prop {
   def genStringFn[A](g: Gen[A]): Gen[String => A] = Gen {
     State { (rng: RNG) =>
       // we still use `rng` to produce a seed, so we get a new function each time
-      val (seed, rng2) = rng.nextInt
-      val f = (s: String) => g.sample.run(RNG.Simple(seed.toLong ^ s.hashCode.toLong))._1
+      val (seed, rng2): (Int, RNG) = rng.nextInt
+      val f = (s: String) => {
+        // Declare a new RNG, dependent on the string
+        val simple: RNG = RNG.Simple(seed.toLong ^ s.hashCode.toLong)
+        g.sample.run(simple)._1  // Note that this RNG is discarded
+      }
       (f, rng2)
     }
   }
 
   // More generally, any function which takes a `String` and an `RNG` and produces a new `RNG` could
-  // be used. Here, we're computing the `hashCode` of the `String` and then XOR'ing it with a seed
-  // value to produce a new `RNG`. We could just as easily take the length of the `String` and use
-  // this value to perturn our RNG state, or take the first 3 characters of the string. The choice
-  // affect what sort of function we are producing:
+  // be used. In above example we're computing the `hashCode` of the `String` and then XOR'ing it
+  // with a seed value to produce a new `RNG`. We could just as easily take the length of the `String`
+  // and use this value to perturb our RNG state, or take the first 3 characters of the string. The
+  // choice affects what sort of function we are producing:
 
   // - If we use `hashCode` to perturb the `RNG` state, the function we are generating uses all the
   //   information of the `String` to influence the `A` value generated. Only input strings that
   //   share the same `hashCode` are guaranteed to produce the same `A`.
+
   // - If we use the `length`, the function we are generating is using only some of the information
   //   of the `String` to influence the `A` being generated. For all input strings that have the
   //   same length, we are guaranteed to get the same `A`.
@@ -386,4 +408,24 @@ object Prop {
       (f, rng2)
     }
   }
+
+  object HashCodeStrategy extends Cogen[String] {
+    override def sample(a: String, rng: RNG): RNG = {
+      RNG.Simple(a.hashCode.toLong)
+    }
+  }
+
+  def fn1[B](out: Gen[B]): Gen[String => B] = fn(HashCodeStrategy)(out)
+
+  object HashCodeStrategy2 extends Cogen[String] {
+    override def sample(a: String, rng: RNG): RNG = {
+      val (seed, _) = rng.nextInt
+      RNG.Simple(seed.toLong ^ a.hashCode.toLong)
+    }
+  }
+
+  // TODO -
+  //  Exercise 8.15 - look at textbook example
+  //  Exercise 8.19 - use genStringFn / fn1 to generate Gen[String => Boolean] to create a take while property?
+  //  Exercise 8.20
 }
