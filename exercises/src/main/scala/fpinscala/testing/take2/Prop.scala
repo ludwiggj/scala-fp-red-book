@@ -215,6 +215,16 @@ object Gen {
 
   def choose(start: Int, stopExclusive: Int): Gen[Int] =
     Gen(State(RNG.nonNegativeInt).map(n => start + n % (stopExclusive - start)))
+
+  // Added for Parser combinator label law, see page 162
+  private val chars = (' ' to '~').toList
+
+  def map[A, B](g: Gen[A])(f: A => B): Gen[B] =
+    Gen(g.sample.map(f))
+
+  val charGen: Gen[Char] = map(choose(0, chars.size))(chars(_))
+
+  def stringGen(length: Int): Gen[String] = map(listOfN(length, charGen))(_.mkString)
 }
 
 case class SGen[+A](g: Int => Gen[A]) {
