@@ -172,6 +172,15 @@ object Prop {
   def checkOnce(p: => Boolean): Prop = Prop {
     (_, _, _) => if (p) Passed else Falsified("()", 0)
   }
+
+  // Added to support chapter 10, monoids, testing of Exercise 10.10
+  def weighted[A](g1: (Gen[A], Double), g2: (Gen[A], Double)): Gen[A] = {
+    val g1Threshold = g1._2.abs / (g1._2.abs + g2._2.abs)
+
+    Gen(State(RNG.double).flatMap(d =>
+      if (d < g1Threshold) g1._1.sample else g2._1.sample
+    ))
+  }
 }
 
 case class Gen[+A](sample: State[RNG, A]) {
@@ -222,9 +231,13 @@ object Gen {
   def map[A, B](g: Gen[A])(f: A => B): Gen[B] =
     Gen(g.sample.map(f))
 
-  val charGen: Gen[Char] = map(choose(0, chars.size))(chars(_))
+  def stringGen(length: Int, ch: List[Char] = chars): Gen[String] = {
+    map(listOfN(length, map(choose(0, ch.size))(ch(_))))(_.mkString)
+  }
 
-  def stringGen(length: Int): Gen[String] = map(listOfN(length, charGen))(_.mkString)
+  // Following replicated from take 1, to support monoid testing (chapter 10, exercise 10.4)
+  def toOption[A](g: Gen[A]): Gen[Option[A]] =
+    map(g)(Some(_))
 }
 
 case class SGen[+A](g: Int => Gen[A]) {

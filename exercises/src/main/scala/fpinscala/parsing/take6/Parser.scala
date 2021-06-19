@@ -133,12 +133,6 @@ object Parser extends Parsers[Parser] {
         r
     }
 
-  def or[A](p: Parser[A], p2: => Parser[A]): Parser[A] =
-    s => p(s) match {
-      case Failure(e,false) => p2(s).mapError(_.addFailure(e))
-      case r => r // committed failure or success skips running `p2`
-    }
-
   // Exercise 9.15 - implement the rest of the primitives, including run (this is the only one left :)
   override def run[A](p: Parser[A])(loc: Location): Result[A] = p(loc)
 
