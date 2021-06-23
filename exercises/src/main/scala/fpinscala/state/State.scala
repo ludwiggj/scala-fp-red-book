@@ -421,8 +421,10 @@ object State {
     xs <- ints(x)
   } yield xs.map(_ % y)
 
+  // Gets the current state (passed in as input) and maintains state, and returns it as result
   def get[S]: State[S, S] = State(s => (s, s))
 
+  // Sets the new state to `s`, throws away result
   def set[S](s: S): State[S, Unit] = State(_ => ((), s))
 
   def modify[S](f: S => S): State[S, Unit] = for {

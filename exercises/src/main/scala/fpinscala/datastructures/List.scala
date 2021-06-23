@@ -699,7 +699,7 @@ object List {
 
   object Exercise_3_20 {
     def flatMap[A, B](l: List[A])(f: A => List[B]): List[B] =
-      foldRight(l, List[B]())((h, acc) => foldRight(f(h), acc)(Cons(_, _)))
+      foldRight(l, List[B]())((hA, accB) => foldRight(f(hA), accB)(Cons(_, _)))
 
     def flatMap2[A, B](l: List[A])(f: A => List[B]): List[B] =
       foldRight(l, List[B]())((h, acc) => Exercise_3_14.appendList(f(h), acc))
