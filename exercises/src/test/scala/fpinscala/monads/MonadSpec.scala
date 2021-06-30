@@ -2,9 +2,8 @@ package fpinscala.monads
 
 import com.typesafe.scalalogging.LazyLogging
 import fpinscala.UnitSpec
-import fpinscala.monads.Monad.{Id, Reader, listMonad, optionMonad, stateMonad}
-import fpinscala.state.RNG.{Simple, sequenceTextbookFoldLeft}
-import fpinscala.state.{RNG, State}
+import fpinscala.monads.Monad._
+import fpinscala.state.State
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 class MonadSpec extends UnitSpec with ScalaCheckPropertyChecks with LazyLogging {
