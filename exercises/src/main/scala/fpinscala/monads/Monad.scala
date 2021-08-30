@@ -462,8 +462,12 @@ object Monad {
   }
 
   object _IntStateMonad extends Monad[({type IntState[A] = State[Int,A]})#IntState] {
+    // def unit[A](a: => A): M[A]
+    // def unit[A](a: => A): IntState[A]
     override def unit[A](a: => A): State[Int, A] = State(i => (a, i))
 
+    // def flatMap[A, B](ma: M[A])(f: A => M[B]): M[B]
+    // def flatMap[A, B](ma: IntState[A])(f: A => IntState[B]): IntState[B]
     override def flatMap[A, B](st: State[Int, A])(f: A => State[Int, B]): State[Int, B] = st flatMap f
   }
 
@@ -472,8 +476,10 @@ object Monad {
   // instance of StateMonad[S] is then a monad instance for the given state type S:
 
   def stateMonad[S] = new Monad[({type f[x] = State[S, x]})#f] {
+    // def unit[A](a: => A): M[A]
     override def unit[A](a: => A): State[S, A] = State(s => (a, s))
 
+    // def flatMap[A, B](ma: M[A])(f: A => M[B]): M[B]
     override def flatMap[A, B](st: State[S, A])(f: A => State[S, B]): State[S, B] = st flatMap f
   }
 
