@@ -49,4 +49,6 @@ object Validation {
       validBirthdate(birthdate),
       validPhone(phone)
     )(WebForm)
+
+  def success[A](a: A): Validation[String, A] = Success(a)
 }

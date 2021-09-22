@@ -504,7 +504,7 @@ class MonoidSpec extends UnitSpec with ScalaCheckPropertyChecks with LazyLogging
     // Compose monoids to calculate sum and length of list of numbers at the same time
     val m: Monoid[(Int, Int)] = productMonoid(intAddition, intAddition)
 
-    val p = ListFoldable.foldMap(List(1, 2, 3, 4))(a => (1, a))(m)
+    val p: (Int, Int) = ListFoldable.foldMap(List(1, 2, 3, 4))(a => (1, a))(m)
 
     assert(p._2 / p._1.toDouble == 2.5)
   }

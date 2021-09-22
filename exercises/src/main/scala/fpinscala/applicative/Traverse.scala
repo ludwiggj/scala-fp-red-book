@@ -205,10 +205,34 @@ trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
       case (b, a :: as) => ((Some(a), b), as)
     }._1
 
+  // Exercise 12.18
   def fuse[G[_], H[_], A, B](fa: F[A])(f: A => G[B], g: A => H[B])
-                            (implicit G: Applicative[G], H: Applicative[H]): (G[F[B]], H[F[B]]) = ???
+                            (implicit G: Applicative[G], H: Applicative[H]): (G[F[B]], H[F[B]]) = {
+    traverse[({type f[x] = (G[x], H[x])})#f, A, B](fa)(a => (f(a), g(a)))(G product H)
+  }
 
-  def compose[G[_]](implicit G: Traverse[G]): Traverse[({type f[x] = F[G[x]]})#f] = ???
+  // Exercise 12.19
+  def compose[G[_]](implicit G: Traverse[G]): Traverse[({type f[x] = F[G[x]]})#f] = {
+    val self = this
+
+    new Traverse[({type f[x] = F[G[x]]})#f] {
+      // Standard traverse definition for F is:
+      // def traverse[G[_] : Applicative, A, B](fa: F[A])(f: A => G[B]): G[F[B]]
+      // This is expanded using f[x] = F[G[x]] to give:
+      override def traverse[H[_] : Applicative, A, B](fga: F[G[A]])(f: A => H[B]): H[F[G[B]]] = {
+        // (1) Inner traverse (G.traverse...):
+        // G.traverse[X[_] : Applicative, A, B](fa: G[A])(f: A => X[B]): X[G[B]]
+        // becomes
+        // G.traverse[H[_] : Applicative, A, B](fa: G[A])(f: A => H[B]): H[G[B]]
+
+        // (2) Outer traverse (self.traverse...):
+        // F.traverse[X[_] : Applicative, A, B](fa: F[A])(f: A => X[B]): X[F[B]]
+        // becomes
+        // F.traverse[H[_] : Applicative, G[A], G[B]](fa: F[G[A]])(f: A => H[G[B]]): H[F[G[B]]]
+        self.traverse(fga)((ga: G[A]) => G.traverse(ga)(f))
+      }
+    }
+  }
 }
 
 object Traverse {

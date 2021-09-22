@@ -64,4 +64,13 @@ object Applicatives {
       override def apply[A, B](fab: Validation[E, A => B])(fa: Validation[E, A]): Validation[E, B] =
         map2(fab, fa)(_ (_))
     }
+
+  def validationSuccessApplicative: Applicative[Success] =
+    new Applicative[Success] {
+      override def unit[A](a: => A): Success[A] = Success(a)
+
+      override def map2[A, B, C](fa: Success[A], fb: Success[B])(f: (A, B) => C): Success[C] = Success(f(fa.a, fb.a))
+
+      override def apply[A, B](fab: Success[A => B])(fa: Success[A]): Success[B] = map2(fab, fa)(_ (_))
+    }
 }

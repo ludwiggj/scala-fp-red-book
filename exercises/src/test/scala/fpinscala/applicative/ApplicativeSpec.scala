@@ -97,10 +97,27 @@ class ApplicativeSpec extends UnitSpec {
   }
 
   // Exercise 12.13
-  "traversible" can "traverse list" in {
+  "traversible" can "traverse list and convert to stream" in {
     // Uses stream applicative
     val result = listTraverse.traverse(List(1, 2, 3))(Applicative[Stream].unit(_))
     assert(result == Stream(List(1, 2, 3)))
+  }
+
+  it can "traverse list and convert to validation success" in {
+    implicit val applicative: Applicative[Success] = Applicatives.validationSuccessApplicative
+
+    val result = listTraverse.traverse(List(1, 2, 3))(applicative.unit(_))
+    assert(result == Success(List(1, 2, 3)))
+  }
+
+  it can "traverse list and convert to validation if one type is fixed" in {
+    type MyValidation[T] = Validation[String, T]
+
+    implicit val applicative: Applicative[MyValidation] = validationApplicative
+
+    val result = listTraverse.traverse(List(1, 2, 3))(applicative.unit(_))
+
+    assert(result == Success(List(1, 2, 3)))
   }
 
   it can "traverse option (Some)" in {
@@ -304,8 +321,6 @@ class ApplicativeSpec extends UnitSpec {
     assert(caught.getMessage == "zip: Incompatible shapes.")
   }
 
-  // HERE
-
   // zipL result has shape of left argument i.e. 3 elements
   "zipL" can "join lists of same length" in {
     assert(listTraverse.zipL(List(1, 2, 3), List(4, 5, 6)) == List((1, Some(4)), (2, Some(5)), (3, Some(6))))
@@ -330,5 +345,35 @@ class ApplicativeSpec extends UnitSpec {
 
   it can "join lists where second list is shorter" in {
     assert(listTraverse.zipR(List(1, 2, 3), List(4, 5)) == List((Some(1), 4), (Some(2), 5)))
+  }
+
+  import fpinscala.applicative.applicativevsmonad.OptionApplicative.F
+
+  "fuse" can "combine two traverses into one" in {
+    implicit val optionApplicative: Applicative[Option] = F
+
+    assert(listTraverse.fuse(List(1, 2, 3, 4))(i => Option(i * 2), i => Stream(i * 2)) ==
+      (Some(List(2, 4, 6, 8)), Stream(List(2, 4, 6, 8)))
+    )
+  }
+
+  it can "combine two different traverses into one" in {
+    implicit val optionApplicative: Applicative[Option] = F
+
+    type MyValidation[T] = Validation[String, T]
+    implicit val applicative: Applicative[MyValidation] = validationApplicative
+
+    assert(listTraverse.fuse(List(1, 2, 3, 4))(i => Option(i * 2), i => Validation.success(i * 2): MyValidation[Int]) ==
+      (Some(List(2, 4, 6, 8)), Success(List(2, 4, 6, 8)))
+    )
+  }
+
+  "compose" can "compose traverses" in {
+    implicit val optTraverse: Traverse[Option] = optionTraverse
+
+    val listOptionTraverse = listTraverse.compose
+
+    assert(listOptionTraverse.traverse(List(Option(1), Some(2), None))(Applicative[Stream].unit(_))
+      == Stream(List(Option(1), Some(2), None)))
   }
 }
