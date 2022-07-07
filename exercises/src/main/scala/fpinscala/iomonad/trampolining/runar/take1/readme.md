@@ -1,0 +1,1 @@
+Based on Rúnar Bjarnason’s paper [_Stackless Scala With Free Monads_](http://blog.higher-order.com/assets/trampolines.pdf) on which previous referenced article is based.

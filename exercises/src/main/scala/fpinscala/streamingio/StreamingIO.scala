@@ -599,8 +599,9 @@ object GeneralizedStreamTransducers {
     def to[O2](sink: Sink[F,O]): Process[F,Unit] =
       join { (this zipWith sink)((o,f) => f(o)) }
 
-    def through[O2](p2: Channel[F, O, O2]): Process[F,O2] =
-      join { (this zipWith p2)((o,f) => f(o)) }
+    // TODO - reinstate
+//    def through[O2](p2: Channel[F, O, O2]): Process[F,O2] =
+//      join { (this zipWith p2)((o,f) => f(o)) }
   }
 
   object Process {
@@ -915,15 +916,15 @@ object GeneralizedStreamTransducers {
      * convert the lines of a file from fahrenheit to celsius.
      */
 
-    import fpinscala.iomonad.IO0.fahrenheitToCelsius
-
-    val converter: Process[IO,Unit] =
-      lines("fahrenheit.txt").
-      filter(line => !line.startsWith("#") && !line.trim.isEmpty).
-      map(line => fahrenheitToCelsius(line.toDouble).toString).
-      pipe(intersperse("\n")).
-      to(fileW("celsius.txt")).
-      drain
+//    import fpinscala.iomonad.IO0.fahrenheitToCelsius
+//
+//    val converter: Process[IO,Unit] =
+//      lines("fahrenheit.txt").
+//      filter(line => !line.startsWith("#") && !line.trim.isEmpty).
+//      map(line => fahrenheitToCelsius(line.toDouble).toString).
+//      pipe(intersperse("\n")).
+//      to(fileW("celsius.txt")).
+//      drain
 
                             /*
 
@@ -932,99 +933,99 @@ object GeneralizedStreamTransducers {
 
                              */
 
-    type Channel[F[_],I,O] = Process[F, I => Process[F,O]]
-
-    /*
-     * Here is an example, a JDBC query runner which returns the
-     * stream of rows from the result set of the query. We have
-     * the channel take a `Connection => PreparedStatement` as
-     * input, so code that uses this channel does not need to be
-     * responsible for knowing how to obtain a `Connection`.
-     */
-    import java.sql.{Connection, PreparedStatement, ResultSet}
-
-    def query(conn: IO[Connection]):
-        Channel[IO, Connection => PreparedStatement, Map[String,Any]] =
-      resource_
-        { conn }
-        { conn => constant { (q: Connection => PreparedStatement) =>
-          resource_
-            { IO {
-                val rs = q(conn).executeQuery
-                val ncols = rs.getMetaData.getColumnCount
-                val cols = (1 to ncols).map(rs.getMetaData.getColumnName)
-                (rs, cols)
-            }}
-            { case (rs, cols) =>
-                def step =
-                  if (!rs.next) None
-                  else Some(cols.map(c => (c, rs.getObject(c): Any)).toMap)
-                lazy val rows: Process[IO,Map[String,Any]] =
-                  eval(IO(step)).flatMap {
-                    case None => Halt(End)
-                    case Some(row) => Emit(row, rows)
-                  }
-                rows
-            }
-            { p => IO { p._1.close } } // close the ResultSet
-        }}
-        { c => IO(c.close) }
-
-    /*
-     * We can allocate resources dynamically when defining a `Process`.
-     * As an example, this program reads a list of filenames to process
-     * _from another file_, opening each file, processing it and closing
-     * it promptly.
-     */
-
-    val convertAll: Process[IO,Unit] = (for {
-      out <- fileW("celsius.txt").once
-      file <- lines("fahrenheits.txt")
-      _ <- lines(file).
-           map(line => fahrenheitToCelsius(line.toDouble)).
-           flatMap(celsius => out(celsius.toString))
-    } yield ()) drain
-
-    /*
-     * Just by switching the order of the `flatMap` calls, we can output
-     * to multiple files.
-     */
-    val convertMultisink: Process[IO,Unit] = (for {
-      file <- lines("fahrenheits.txt")
-      _ <- lines(file).
-           map(line => fahrenheitToCelsius(line.toDouble)).
-           map(_ toString).
-           to(fileW(file + ".celsius"))
-    } yield ()) drain
-
-    /*
-     * We can attach filters or other transformations at any point in the
-     * program, for example:
-     */
-    val convertMultisink2: Process[IO,Unit] = (for {
-      file <- lines("fahrenheits.txt")
-      _ <- lines(file).
-           filter(!_.startsWith("#")).
-           map(line => fahrenheitToCelsius(line.toDouble)).
-           filter(_ > 0). // ignore below zero temperatures
-           map(_ toString).
-           to(fileW(file + ".celsius"))
-    } yield ()) drain
+//    type Channel[F[_],I,O] = Process[F, I => Process[F,O]]
+//
+//    /*
+//     * Here is an example, a JDBC query runner which returns the
+//     * stream of rows from the result set of the query. We have
+//     * the channel take a `Connection => PreparedStatement` as
+//     * input, so code that uses this channel does not need to be
+//     * responsible for knowing how to obtain a `Connection`.
+//     */
+//    import java.sql.{Connection, PreparedStatement, ResultSet}
+//
+//    def query(conn: IO[Connection]):
+//        Channel[IO, Connection => PreparedStatement, Map[String,Any]] =
+//      resource_
+//        { conn }
+//        { conn => constant { (q: Connection => PreparedStatement) =>
+//          resource_
+//            { IO {
+//                val rs = q(conn).executeQuery
+//                val ncols = rs.getMetaData.getColumnCount
+//                val cols = (1 to ncols).map(rs.getMetaData.getColumnName)
+//                (rs, cols)
+//            }}
+//            { case (rs, cols) =>
+//                def step =
+//                  if (!rs.next) None
+//                  else Some(cols.map(c => (c, rs.getObject(c): Any)).toMap)
+//                lazy val rows: Process[IO,Map[String,Any]] =
+//                  eval(IO(step)).flatMap {
+//                    case None => Halt(End)
+//                    case Some(row) => Emit(row, rows)
+//                  }
+//                rows
+//            }
+//            { p => IO { p._1.close } } // close the ResultSet
+//        }}
+//        { c => IO(c.close) }
+//
+//    /*
+//     * We can allocate resources dynamically when defining a `Process`.
+//     * As an example, this program reads a list of filenames to process
+//     * _from another file_, opening each file, processing it and closing
+//     * it promptly.
+//     */
+//
+//    val convertAll: Process[IO,Unit] = (for {
+//      out <- fileW("celsius.txt").once
+//      file <- lines("fahrenheits.txt")
+//      _ <- lines(file).
+//           map(line => fahrenheitToCelsius(line.toDouble)).
+//           flatMap(celsius => out(celsius.toString))
+//    } yield ()) drain
+//
+//    /*
+//     * Just by switching the order of the `flatMap` calls, we can output
+//     * to multiple files.
+//     */
+//    val convertMultisink: Process[IO,Unit] = (for {
+//      file <- lines("fahrenheits.txt")
+//      _ <- lines(file).
+//           map(line => fahrenheitToCelsius(line.toDouble)).
+//           map(_ toString).
+//           to(fileW(file + ".celsius"))
+//    } yield ()) drain
+//
+//    /*
+//     * We can attach filters or other transformations at any point in the
+//     * program, for example:
+//     */
+//    val convertMultisink2: Process[IO,Unit] = (for {
+//      file <- lines("fahrenheits.txt")
+//      _ <- lines(file).
+//           filter(!_.startsWith("#")).
+//           map(line => fahrenheitToCelsius(line.toDouble)).
+//           filter(_ > 0). // ignore below zero temperatures
+//           map(_ toString).
+//           to(fileW(file + ".celsius"))
+//    } yield ()) drain
   }
 }
-
-object ProcessTest extends App {
-  import GeneralizedStreamTransducers._
-  import fpinscala.iomonad.IO
-  import Process._
-
-  val p = eval(IO { println("woot"); 1 }).repeat
-  val p2 = eval(IO { println("cleanup"); 2 } ).onHalt {
-    case Kill => println { "cleanup was killed, instead of bring run" }; Halt(Kill)
-    case e => Halt(e)
-  }
-
-  println { Process.runLog { p2.onComplete(p2).onComplete(p2).take(1).take(1) } }
-  println { Process.runLog(converter) }
-  // println { Process.collect(Process.convertAll) }
-}
+//
+//object ProcessTest extends App {
+//  import GeneralizedStreamTransducers._
+//  import fpinscala.iomonad.IO
+//  import Process._
+//
+//  val p = eval(IO { println("woot"); 1 }).repeat
+//  val p2 = eval(IO { println("cleanup"); 2 } ).onHalt {
+//    case Kill => println { "cleanup was killed, instead of bring run" }; Halt(Kill)
+//    case e => Halt(e)
+//  }
+//
+//  println { Process.runLog { p2.onComplete(p2).onComplete(p2).take(1).take(1) } }
+//  println { Process.runLog(converter) }
+//  // println { Process.collect(Process.convertAll) }
+//}
